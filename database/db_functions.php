@@ -41,8 +41,17 @@ function getUserByEmail($email) {
     return $stmt->fetch();
 }
 
-function verifyUserLogin($email, $password) {
-    $user = getUserByEmail($email);
+function verifyUserLogin($email_or_username, $password) {
+    $db = getDB();
+    // Check both email and username
+    $sql = "SELECT * FROM User WHERE email = :identifier OR username = :identifier2";
+    $stmt = $db->prepare($sql);
+    $stmt->execute([
+        ':identifier' => $email_or_username,
+        ':identifier2' => $email_or_username
+    ]);
+    $user = $stmt->fetch();
+    
     if ($user && password_verify($password, $user['password'])) {
         return $user;
     }

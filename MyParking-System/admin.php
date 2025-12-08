@@ -18,7 +18,7 @@
     <!-- Header -->
     <header class="header">
         <div class="header-content">
-            <a href="admin.html" class="logo">MY PARKING</a>
+            <a href="admin.php" class="logo">MY PARKING</a>
             
             <nav class="nav">
                 <a href="#dashboard">Dashboard</a>
@@ -26,7 +26,7 @@
                 <a href="#system-settings">System Settings</a>
                 <a href="#analytics">Analytics</a>
                 <a href="#reports">Reports</a>
-                <a href="#logout">Logout</a>
+                <a href="module01/login.php?logout=1">Logout</a>
             </nav>
         </div>
     </header>
