@@ -70,12 +70,6 @@ define('DB_PASS', '');              // Your MySQL password
 8. **ParkingLog** - Event logs for bookings
 9. **User_points** - Violation points tracking
 
-### Views
-
-1. **active_bookings** - Currently active parking reservations
-2. **user_tickets_detail** - Detailed ticket information with user and violation data
-3. **parking_space_availability** - Real-time parking availability
-
 ## Usage Examples
 
 ### Include Database Configuration in PHP Files
