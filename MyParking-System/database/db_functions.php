@@ -4,7 +4,7 @@
  * Parking Management System
  */
 
-require_once 'db_config.php';
+require_once __DIR__ . '/db_config.php';
 
 // ============================================
 // User Functions
@@ -52,8 +52,20 @@ function verifyUserLogin($email_or_username, $password) {
     ]);
     $user = $stmt->fetch();
     
-    if ($user && password_verify($password, $user['password'])) {
-        return $user;
+    // Check if password is hashed or plain text
+    if ($user) {
+        // If password starts with $2y$ it's hashed, otherwise it's plain text
+        if (strpos($user['password'], '$2y$') === 0) {
+            // Hashed password - use password_verify
+            if (password_verify($password, $user['password'])) {
+                return $user;
+            }
+        } else {
+            // Plain text password - direct comparison
+            if ($password === $user['password']) {
+                return $user;
+            }
+        }
     }
     return false;
 }

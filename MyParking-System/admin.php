@@ -10,7 +10,7 @@
     <title>MyParking - Admin Dashboard</title>
 
     <!-- CSS File -->
-    <link rel="stylesheet" href="../assets/fonts/style.css">
+    <link rel="stylesheet" href="fonts/style.css">
 </head>
 
 <body class="admin-theme">
@@ -59,7 +59,7 @@
 
     <!-- Footer -->
     <footer class="footer">
-        <p>&copy; 2025 MyParking System. Admin Panel - All rights reserved.</p>
+        <p>&copy; 2025 MyParking System. All rights reserved.</p>
     </footer>
 
 </body>

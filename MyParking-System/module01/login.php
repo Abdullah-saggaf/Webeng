@@ -29,7 +29,12 @@ if (isset($_SESSION['user_id'])) {
     }
 }
 
-require_once '../../database/db_functions.php';
+// Add this temporarily before require_once to debug:
+// echo "Current directory: " . __DIR__ . "<br>";
+// echo "Looking for: " . realpath(__DIR__ . '/../database/db_functions.php') . "<br>";
+// die();
+
+require_once __DIR__ . '/../database/db_functions.php';
 
 $error_message = '';
 

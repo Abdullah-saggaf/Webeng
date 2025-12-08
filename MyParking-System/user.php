@@ -10,7 +10,7 @@
     <title>MyParking - User Dashboard</title>
 
     <!-- CSS File -->
-    <link rel="stylesheet" href="../assets/fonts/style.css">
+    <link rel="stylesheet" href="fonts/style.css">
 </head>
 
 <body class="user-theme">
