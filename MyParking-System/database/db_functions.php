@@ -43,7 +43,6 @@ function getUserByEmail($email) {
 
 function verifyUserLogin($email_or_username, $password) {
     $db = getDB();
-    // Check both email and username
     $sql = "SELECT * FROM User WHERE email = :identifier OR username = :identifier2";
     $stmt = $db->prepare($sql);
     $stmt->execute([
@@ -51,46 +50,90 @@ function verifyUserLogin($email_or_username, $password) {
         ':identifier2' => $email_or_username
     ]);
     $user = $stmt->fetch();
-    
-    // Check if password is hashed or plain text
-    if ($user) {
-        // If password starts with $2y$ it's hashed, otherwise it's plain text
-        if (strpos($user['password'], '$2y$') === 0) {
-            // Hashed password - use password_verify
-            if (password_verify($password, $user['password'])) {
-                return $user;
-            }
-        } else {
-            // Plain text password - direct comparison
-            if ($password === $user['password']) {
-                return $user;
-            }
-        }
+
+    if ($user && password_verify($password, $user['password'])) {
+        return $user;
     }
+
     return false;
+}
+
+function getUsers(array $filters = []) {
+    $db = getDB();
+    $sql = "SELECT user_ID, username, email, phone_number, user_type, created_at, updated_at FROM User WHERE 1=1";
+    $params = [];
+
+    if (!empty($filters['user_type'])) {
+        $sql .= " AND user_type = :user_type";
+        $params[':user_type'] = $filters['user_type'];
+    }
+
+    if (!empty($filters['search'])) {
+        $sql .= " AND (username LIKE :search OR email LIKE :search OR user_ID LIKE :search)";
+        $params[':search'] = '%' . $filters['search'] . '%';
+    }
+
+    $sql .= " ORDER BY created_at DESC";
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll();
+}
+
+function updateUser($user_id, array $fields) {
+    $db = getDB();
+
+    $allowed = ['username', 'email', 'phone_number', 'user_type', 'password'];
+    $setParts = [];
+    $params = [':user_id' => $user_id];
+
+    foreach ($allowed as $column) {
+        if (!isset($fields[$column])) {
+            continue;
+        }
+
+        $placeholder = ':' . $column;
+        $value = $column === 'password' ? password_hash($fields[$column], PASSWORD_DEFAULT) : $fields[$column];
+
+        $setParts[] = "$column = $placeholder";
+        $params[$placeholder] = $value;
+    }
+
+    if (empty($setParts)) {
+        return false;
+    }
+
+    $sql = "UPDATE User SET " . implode(', ', $setParts) . " WHERE user_ID = :user_id";
+    $stmt = $db->prepare($sql);
+    return $stmt->execute($params);
+}
+
+function deleteUser($user_id) {
+    $db = getDB();
+    $stmt = $db->prepare("DELETE FROM User WHERE user_ID = :user_id");
+    return $stmt->execute([':user_id' => $user_id]);
 }
 
 // ============================================
 // Vehicle Functions
 // ============================================
 
-function addVehicle($user_id, $vehicle_type, $vehicle_model, $license_plate, $grant_status) {
+function addVehicle($user_id, $vehicle_type, $vehicle_model, $license_plate, $grant_document_path) {
     $db = getDB();
-    $sql = "INSERT INTO Vehicle (user_ID, vehicle_type, vehicle_model, license_plate, grant_status) 
-            VALUES (:user_id, :vehicle_type, :vehicle_model, :license_plate, :grant_status)";
+    $sql = "INSERT INTO Vehicle (user_ID, vehicle_type, vehicle_model, license_plate, grant_document, grant_status) 
+            VALUES (:user_id, :vehicle_type, :vehicle_model, :license_plate, :grant_document, 'Pending')";
     $stmt = $db->prepare($sql);
     return $stmt->execute([
         ':user_id' => $user_id,
         ':vehicle_type' => $vehicle_type,
         ':vehicle_model' => $vehicle_model,
         ':license_plate' => $license_plate,
-        ':grant_status' => $grant_status
+        ':grant_document' => $grant_document_path
     ]);
 }
 
 function getVehiclesByUser($user_id) {
     $db = getDB();
-    $sql = "SELECT * FROM Vehicle WHERE user_ID = :user_id";
+    $sql = "SELECT * FROM Vehicle WHERE user_ID = :user_id ORDER BY created_at DESC";
     $stmt = $db->prepare($sql);
     $stmt->execute([':user_id' => $user_id]);
     return $stmt->fetchAll();
@@ -102,6 +145,102 @@ function getVehicleById($vehicle_id) {
     $stmt = $db->prepare($sql);
     $stmt->execute([':vehicle_id' => $vehicle_id]);
     return $stmt->fetch();
+}
+
+function getVehicleForUser($vehicle_id, $user_id) {
+    $db = getDB();
+    $sql = "SELECT * FROM Vehicle WHERE vehicle_ID = :vehicle_id AND user_ID = :user_id";
+    $stmt = $db->prepare($sql);
+    $stmt->execute([
+        ':vehicle_id' => $vehicle_id,
+        ':user_id' => $user_id
+    ]);
+    return $stmt->fetch();
+}
+
+function updateVehicle($vehicle_id, $user_id, $fields) {
+    $db = getDB();
+    $allowed = ['vehicle_type', 'vehicle_model', 'license_plate', 'grant_document', 'grant_status', 'rejection_reason'];
+    $setParts = [];
+    $params = [
+        ':vehicle_id' => $vehicle_id,
+        ':user_id' => $user_id
+    ];
+
+    foreach ($allowed as $column) {
+        if (!isset($fields[$column])) {
+            continue;
+        }
+
+        $placeholder = ':' . $column;
+        $setParts[] = "$column = $placeholder";
+        $params[$placeholder] = $fields[$column];
+    }
+
+    if (empty($setParts)) {
+        return false;
+    }
+
+    $sql = "UPDATE Vehicle SET " . implode(', ', $setParts) . " WHERE vehicle_ID = :vehicle_id AND user_ID = :user_id";
+    $stmt = $db->prepare($sql);
+    return $stmt->execute($params);
+}
+
+function deleteVehicle($vehicle_id, $user_id) {
+    $db = getDB();
+    $stmt = $db->prepare("DELETE FROM Vehicle WHERE vehicle_ID = :vehicle_id AND user_ID = :user_id");
+    return $stmt->execute([
+        ':vehicle_id' => $vehicle_id,
+        ':user_id' => $user_id
+    ]);
+}
+
+function getPendingVehicles(array $filters = []) {
+    $db = getDB();
+    $sql = "SELECT v.*, u.username, u.user_ID AS owner_id, u.email 
+            FROM Vehicle v
+            JOIN User u ON v.user_ID = u.user_ID
+            WHERE v.grant_status = 'Pending'";
+    $params = [];
+
+    if (!empty($filters['license_plate'])) {
+        $sql .= " AND v.license_plate LIKE :plate";
+        $params[':plate'] = '%' . $filters['license_plate'] . '%';
+    }
+
+    if (!empty($filters['user_ID'])) {
+        $sql .= " AND v.user_ID = :user_id";
+        $params[':user_id'] = $filters['user_ID'];
+    }
+
+    $sql .= " ORDER BY v.created_at DESC";
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll();
+}
+
+function setVehicleStatus($vehicle_id, $status, $reason = null) {
+    $db = getDB();
+    $stmt = $db->prepare("UPDATE Vehicle SET grant_status = :status, rejection_reason = :reason WHERE vehicle_ID = :vehicle_id");
+    return $stmt->execute([
+        ':vehicle_id' => $vehicle_id,
+        ':status' => $status,
+        ':reason' => $reason
+    ]);
+}
+
+function getApprovedVehicles() {
+    $db = getDB();
+    $sql = "SELECT * FROM Vehicle WHERE grant_status = 'Approved' ORDER BY created_at DESC";
+    $stmt = $db->query($sql);
+    return $stmt->fetchAll();
+}
+
+function getRejectedVehicles() {
+    $db = getDB();
+    $sql = "SELECT * FROM Vehicle WHERE grant_status = 'Rejected' ORDER BY created_at DESC";
+    $stmt = $db->query($sql);
+    return $stmt->fetchAll();
 }
 
 // ============================================
@@ -272,6 +411,36 @@ function getUserPoints($user_id) {
     $stmt->execute([':user_id' => $user_id]);
     $result = $stmt->fetch();
     return $result ? $result['total_points'] : 0;
+}
+
+// ============================================
+// Reporting Helpers (Module 01)
+// ============================================
+
+function getVehicleStatusCounts() {
+    $db = getDB();
+    $sql = "SELECT grant_status, COUNT(*) as total FROM Vehicle GROUP BY grant_status";
+    $stmt = $db->query($sql);
+    return $stmt->fetchAll();
+}
+
+function getStudentVehicleSummary() {
+    $db = getDB();
+    $sql = "SELECT 
+                u.user_ID,
+                u.username,
+                u.email,
+                COUNT(v.vehicle_ID) AS total_vehicles,
+                SUM(v.grant_status = 'Approved') AS approved_count,
+                SUM(v.grant_status = 'Pending') AS pending_count,
+                SUM(v.grant_status = 'Rejected') AS rejected_count
+            FROM User u
+            LEFT JOIN Vehicle v ON u.user_ID = v.user_ID
+            WHERE u.user_type = 'student'
+            GROUP BY u.user_ID, u.username, u.email
+            ORDER BY total_vehicles DESC, u.username";
+    $stmt = $db->query($sql);
+    return $stmt->fetchAll();
 }
 
 ?>

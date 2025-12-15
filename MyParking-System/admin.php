@@ -1,66 +1,105 @@
-<!DOCTYPE html>
-<html lang="en">
+<?php
+require_once __DIR__ . '/module01/auth.php';
+require_once __DIR__ . '/module01/layout.php';
+require_once __DIR__ . '/database/db_functions.php';
 
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="MyParking - Admin Dashboard">
-    <meta name="author" content="MyParking Team">
+// Require fk_staff role
+requireRole(['fk_staff']);
 
-    <title>MyParking - Admin Dashboard</title>
+$user = currentUser();
 
-    <!-- CSS File -->
-    <link rel="stylesheet" href="fonts/style.css">
-</head>
+// Get user statistics
+$allUsers = getUsers();
+$stats = [
+    'total_users' => count($allUsers),
+    'students' => count(array_filter($allUsers, fn($u) => $u['user_type'] === 'student')),
+    'fk_staff' => count(array_filter($allUsers, fn($u) => $u['user_type'] === 'fk_staff')),
+    'safety_staff' => count(array_filter($allUsers, fn($u) => $u['user_type'] === 'safety_staff'))
+];
 
-<body class="admin-theme">
+renderHeader('Admin Dashboard');
+?>
 
-    <!-- Header -->
-    <header class="header">
-        <div class="header-content">
-            <a href="admin.php" class="logo">MY PARKING</a>
-            
-            <nav class="nav">
-                <a href="#dashboard">Dashboard</a>
-                <a href="#user-management">User Management</a>
-                <a href="#system-settings">System Settings</a>
-                <a href="#analytics">Analytics</a>
-                <a href="#reports">Reports</a>
-                <a href="module01/login.php?logout=1">Logout</a>
-            </nav>
-        </div>
-    </header>
+<div class="card">
+    <h2>Administrator Control Center</h2>
+    <p>Welcome, <strong><?php echo htmlspecialchars($user['username']); ?></strong>!</p>
+</div>
 
-    <!-- Main Content -->
-    <main class="main-content">
-        <h1 class="page-title">Administrator Control Center</h1>
-        
-        <!-- Statistics -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <h3>1,245</h3>
-                <p>Total Users</p>
-            </div>
-            <div class="stat-card">
-                <h3>15</h3>
-                <p>Staff Members</p>
-            </div>
-            <div class="stat-card">
-                <h3>$12,580</h3>
-                <p>Monthly Revenue</p>
-            </div>
-            <div class="stat-card">
-                <h3>98.5%</h3>
-                <p>System Uptime</p>
-            </div>
-        </div>
-        
-    </main>
+<!-- Statistics -->
+<div class="grid">
+    <div class="card">
+        <h3>Total Users</h3>
+        <p style="font-size: 24px; font-weight: 700; color: #4f46e5;"><?php echo $stats['total_users']; ?></p>
+    </div>
+    <div class="card">
+        <h3>Students</h3>
+        <p style="font-size: 24px; font-weight: 700; color: #0891b2;"><?php echo $stats['students']; ?></p>
+    </div>
+    <div class="card">
+        <h3>FK Staff</h3>
+        <p style="font-size: 24px; font-weight: 700; color: #7c3aed;"><?php echo $stats['fk_staff']; ?></p>
+    </div>
+    <div class="card">
+        <h3>Safety Staff</h3>
+        <p style="font-size: 24px; font-weight: 700; color: #f59e0b;"><?php echo $stats['safety_staff']; ?></p>
+    </div>
+</div>
 
-    <!-- Footer -->
-    <footer class="footer">
-        <p>&copy; 2025 MyParking System. All rights reserved.</p>
-    </footer>
+<div class="card" style="margin-top: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h2>Recent Users</h2>
+        <a href="<?php echo appUrl('/admin/users.php'); ?>" class="btn">Manage All Users</a>
+    </div>
+    
+    <?php if ($allUsers): ?>
+        <table>
+            <thead>
+                <tr>
+                    <th>User ID</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Created</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php 
+                $displayUsers = array_slice($allUsers, 0, 8); // Show first 8
+                foreach ($displayUsers as $u): 
+                ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars($u['user_ID']); ?></td>
+                        <td><?php echo htmlspecialchars($u['username']); ?></td>
+                        <td><?php echo htmlspecialchars($u['email']); ?></td>
+                        <td>
+                            <span class="badge" style="background: <?php 
+                                $colors = ['student' => '#dbeafe', 'fk_staff' => '#e9d5ff', 'safety_staff' => '#fef3c7'];
+                                echo $colors[$u['user_type']] ?? '#f3f4f6';
+                            ?>; color: #1f2937;">
+                                <?php echo str_replace('_', ' ', ucfirst($u['user_type'])); ?>
+                            </span>
+                        </td>
+                        <td><?php echo date('M d, Y', strtotime($u['created_at'])); ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+        <?php if (count($allUsers) > 8): ?>
+            <p style="text-align: center; margin-top: 12px; color: #6b7280;">
+                <a href="<?php echo appUrl('/admin/users.php'); ?>">View all <?php echo count($allUsers); ?> users →</a>
+            </p>
+        <?php endif; ?>
+    <?php else: ?>
+        <p style="text-align: center; color: #6b7280; padding: 20px;">No users in the system yet.</p>
+    <?php endif; ?>
+</div>
 
-</body>
-</html>
+<div class="card" style="margin-top: 24px;">
+    <h2>Quick Actions</h2>
+    <div class="actions">
+        <a href="<?php echo appUrl('/admin/users.php'); ?>" class="btn secondary">User Management</a>
+        <a href="<?php echo appUrl('/admin/reports.php'); ?>" class="btn secondary">View Reports</a>
+    </div>
+</div>
+
+<?php renderFooter(); ?>

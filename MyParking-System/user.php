@@ -1,66 +1,87 @@
-<!DOCTYPE html>
-<html lang="en">
+<?php
+require_once __DIR__ . '/module01/auth.php';
+require_once __DIR__ . '/module01/layout.php';
+require_once __DIR__ . '/database/db_functions.php';
 
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="MyParking - Normal User Dashboard">
-    <meta name="author" content="MyParking Team">
+// Require student role
+requireRole(['student']);
 
-    <title>MyParking - User Dashboard</title>
+$user = currentUser();
+$userId = $user['user_id'];
 
-    <!-- CSS File -->
-    <link rel="stylesheet" href="fonts/style.css">
-</head>
+// Get student's vehicles
+$vehicles = getVehiclesByUser($userId);
+$stats = [
+    'total_vehicles' => count($vehicles),
+    'approved' => count(array_filter($vehicles, fn($v) => $v['grant_status'] === 'Approved')),
+    'pending' => count(array_filter($vehicles, fn($v) => $v['grant_status'] === 'Pending')),
+    'rejected' => count(array_filter($vehicles, fn($v) => $v['grant_status'] === 'Rejected'))
+];
 
-<body class="user-theme">
+renderHeader('Student Dashboard');
+?>
 
-    <!-- Header -->
-    <header class="header">
-        <div class="header-content">
-            <a href="user.php" class="logo">MY PARKING</a>
-            
-            <nav class="nav">
-                <a href="#dashboard">Dashboard</a>
-                <a href="#book-parking">Book Parking</a>
-                <a href="#my-vehicles">My Vehicles</a>
-                <a href="#parking-history">History</a>
-                <a href="#profile">Profile</a>
-                <a href="module01/login.php?logout=1">Logout</a>
-            </nav>
-        </div>
-    </header>
+<div class="card">
+    <h2>Your Vehicle Dashboard</h2>
+    <p>Welcome back, <strong><?php echo htmlspecialchars($user['username']); ?></strong>!</p>
+</div>
 
-    <!-- Main Content -->
-    <main class="main-content">
-        <h1 class="page-title">Welcome to Your Parking Dashboard</h1>
-        
-        <!-- Statistics -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <h3>12</h3>
-                <p>Total Bookings</p>
-            </div>
-            <div class="stat-card">
-                <h3>3</h3>
-                <p>Active Vehicles</p>
-            </div>
-            <div class="stat-card">
-                <h3>$85.50</h3>
-                <p>Monthly Spending</p>
-            </div>
-            <div class="stat-card">
-                <h3>95%</h3>
-                <p>Success Rate</p>
-            </div>
-        </div>
-        
-    </main>
+<!-- Statistics -->
+<div class="grid">
+    <div class="card">
+        <h3>Total Vehicles</h3>
+        <p style="font-size: 24px; font-weight: 700; color: #4f46e5;"><?php echo $stats['total_vehicles']; ?></p>
+    </div>
+    <div class="card">
+        <h3>Approved</h3>
+        <p style="font-size: 24px; font-weight: 700; color: #059669;"><?php echo $stats['approved']; ?></p>
+    </div>
+    <div class="card">
+        <h3>Pending</h3>
+        <p style="font-size: 24px; font-weight: 700; color: #d97706;"><?php echo $stats['pending']; ?></p>
+    </div>
+    <div class="card">
+        <h3>Rejected</h3>
+        <p style="font-size: 24px; font-weight: 700; color: #dc2626;"><?php echo $stats['rejected']; ?></p>
+    </div>
+</div>
 
-    <!-- Footer -->
-    <footer class="footer">
-        <p>&copy; 2025 MyParking System. All rights reserved.</p>
-    </footer>
+<div class="card" style="margin-top: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h2>My Vehicles</h2>
+        <a href="<?php echo appUrl('/student/main.php'); ?>" class="btn">Manage Vehicles</a>
+    </div>
+    
+    <?php if ($vehicles): ?>
+        <table>
+            <thead>
+                <tr>
+                    <th>License Plate</th>
+                    <th>Type</th>
+                    <th>Model</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($vehicles as $vehicle): ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars($vehicle['license_plate']); ?></td>
+                        <td><?php echo htmlspecialchars($vehicle['vehicle_type']); ?></td>
+                        <td><?php echo htmlspecialchars($vehicle['vehicle_model'] ?? 'N/A'); ?></td>
+                        <td>
+                            <span class="badge <?php echo strtolower($vehicle['grant_status']); ?>">
+                                <?php echo $vehicle['grant_status']; ?>
+                            </span>
+                        </td>
+                        <td><?php echo date('M d, Y', strtotime($vehicle['created_at'])); ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    <?php else: ?>
+        <p style="text-align: center; color: #6b7280; padding: 20px;">No vehicles registered yet. <a href="<?php echo appUrl('/student/main.php'); ?>">Register your first vehicle</a></p>
+    <?php endif; ?>
+</div>
 
-</body>
-</html>
+<?php renderFooter(); ?>

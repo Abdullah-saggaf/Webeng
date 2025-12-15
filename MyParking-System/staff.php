@@ -1,66 +1,91 @@
-<!DOCTYPE html>
-<html lang="en">
+<?php
+require_once __DIR__ . '/module01/auth.php';
+require_once __DIR__ . '/module01/layout.php';
+require_once __DIR__ . '/database/db_functions.php';
 
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="MyParking - Staff Dashboard">
-    <meta name="author" content="MyParking Team">
+// Require safety_staff role
+requireRole(['safety_staff']);
 
-    <title>MyParking - Staff Dashboard</title>
+$user = currentUser();
 
-    <!-- CSS File -->
-    <link rel="stylesheet" href="fonts/style.css">
-</head>
+// Get pending vehicles
+$pendingVehicles = getPendingVehicles();
+$stats = [
+    'pending' => count($pendingVehicles),
+    'total_approvals' => count(getApprovedVehicles()) + count(getPendingVehicles()) + count(getRejectedVehicles())
+];
 
-<body class="staff-theme">
+renderHeader('Safety Staff Dashboard');
+?>
 
-    <!-- Header -->
-    <header class="header">
-        <div class="header-content">
-            <a href="staff.php" class="logo">MY PARKING</a>
-            
-            <nav class="nav">
-                <a href="#dashboard">Dashboard</a>
-                <a href="#parking-areas">Parking Areas</a>
-                <a href="#traffic-management">Traffic Control</a>
-                <a href="#reports">Reports</a>
-                <a href="#violations">Violations</a>
-                <a href="module01/login.php?logout=1">Logout</a>
-            </nav>
-        </div>
-    </header>
+<div class="card">
+    <h2>Vehicle Approval Dashboard</h2>
+    <p>Welcome, <strong><?php echo htmlspecialchars($user['username']); ?></strong>!</p>
+</div>
 
-    <!-- Main Content -->
-    <main class="main-content">
-        <h1 class="page-title">Staff Control Panel</h1>
-        
-        <!-- Statistics -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <h3>245</h3>
-                <p>Active Users</p>
-            </div>
-            <div class="stat-card">
-                <h3>18</h3>
-                <p>Parking Areas</p>
-            </div>
-            <div class="stat-card">
-                <h3>156</h3>
-                <p>Total Spaces</p>
-            </div>
-            <div class="stat-card">
-                <h3>7</h3>
-                <p>Violations Today</p>
-            </div>
-        </div>
-        
-    </main>
+<!-- Statistics -->
+<div class="grid">
+    <div class="card">
+        <h3>Pending Approvals</h3>
+        <p style="font-size: 24px; font-weight: 700; color: #d97706;"><?php echo $stats['pending']; ?></p>
+    </div>
+    <div class="card">
+        <h3>Total Processed</h3>
+        <p style="font-size: 24px; font-weight: 700; color: #4f46e5;"><?php echo $stats['total_approvals']; ?></p>
+    </div>
+</div>
 
-    <!-- Footer -->
-    <footer class="footer">
-        <p>&copy; 2025 MyParking System. All rights reserved.</p>
-    </footer>
+<div class="card" style="margin-top: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h2>Pending Vehicle Approvals</h2>
+        <a href="<?php echo appUrl('/safety/vehicle-approvals.php'); ?>" class="btn">View All</a>
+    </div>
+    
+    <?php if ($pendingVehicles): ?>
+        <table>
+            <thead>
+                <tr>
+                    <th>License Plate</th>
+                    <th>Student</th>
+                    <th>Vehicle Type</th>
+                    <th>Submitted</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php 
+                $displayVehicles = array_slice($pendingVehicles, 0, 5); // Show first 5
+                foreach ($displayVehicles as $vehicle): 
+                    $student = getUserById($vehicle['user_ID']);
+                ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars($vehicle['license_plate']); ?></td>
+                        <td><?php echo htmlspecialchars($student['username'] ?? 'N/A'); ?></td>
+                        <td><?php echo htmlspecialchars($vehicle['vehicle_type']); ?></td>
+                        <td><?php echo date('M d, Y', strtotime($vehicle['created_at'])); ?></td>
+                        <td>
+                            <a href="<?php echo appUrl('/safety/vehicle-approvals.php?id=' . $vehicle['vehicle_ID']); ?>" class="btn" style="font-size: 12px; padding: 6px 10px;">Review</a>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+        <?php if (count($pendingVehicles) > 5): ?>
+            <p style="text-align: center; margin-top: 12px; color: #6b7280;">
+                <a href="<?php echo appUrl('/safety/vehicle-approvals.php'); ?>">View all <?php echo count($pendingVehicles); ?> pending approvals →</a>
+            </p>
+        <?php endif; ?>
+    <?php else: ?>
+        <p style="text-align: center; color: #6b7280; padding: 20px;">No pending vehicle approvals. All caught up!</p>
+    <?php endif; ?>
+</div>
 
-</body>
-</html>
+<div class="card" style="margin-top: 24px;">
+    <h2>Quick Actions</h2>
+    <div class="actions">
+        <a href="<?php echo appUrl('/safety/reports.php'); ?>" class="btn secondary">View Reports</a>
+        <a href="<?php echo appUrl('/safety/vehicle-approvals.php'); ?>" class="btn">Go to Approvals</a>
+    </div>
+</div>
+
+<?php renderFooter(); ?>
