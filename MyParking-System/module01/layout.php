@@ -37,24 +37,192 @@ function renderHeader($title = 'MyParking') {
         <title><?php echo htmlspecialchars($title); ?></title>
         <link rel="stylesheet" href="<?php echo APP_BASE_PATH . '/fonts/style.css'; ?>">
         <style>
-            .card { background: #fff; border-radius: 14px; box-shadow: 0 10px 35px rgba(15,23,42,0.08); padding: 20px; margin-top: 18px; }
-            .actions { display: flex; gap: 10px; }
-            button, .btn { background: #4f46e5; color: #fff; border: none; padding: 10px 14px; border-radius: 10px; cursor: pointer; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
-            button.secondary, .btn.secondary { background: #e5e7eb; color: #111827; }
-            table { width: 100%; border-collapse: collapse; margin-top: 14px; }
-            th, td { text-align: left; padding: 10px; border-bottom: 1px solid #e5e7eb; font-size: 14px; }
-            th { background: #f8fafc; text-transform: uppercase; letter-spacing: 0.03em; font-size: 12px; }
-            .badge { display: inline-block; padding: 4px 8px; border-radius: 8px; font-size: 12px; font-weight: 700; }
-            .badge.pending { background: #fef3c7; color: #92400e; }
-            .badge.approved { background: #dcfce7; color: #166534; }
-            .badge.rejected { background: #fee2e2; color: #991b1b; }
+            /* Professional Background with Overlay */
+            body { 
+                background-image: 
+                    linear-gradient(135deg, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.5) 100%),
+                    url('<?php echo APP_BASE_PATH . '/images/MY.png'; ?>');
+                background-size: cover;
+                background-position: center;
+                background-attachment: fixed;
+                background-repeat: no-repeat;
+                background-color: #1a1a1a;
+                color: #333;
+            }
+            
+            /* Professional Glass Cards */
+            .card { 
+                background: rgba(255, 255, 255, 0.95); 
+                backdrop-filter: blur(20px);
+                border-radius: 20px; 
+                box-shadow: 
+                    0 20px 50px rgba(0, 0, 0, 0.2),
+                    0 0 0 1px rgba(255, 255, 255, 0.1);
+                padding: 30px; 
+                margin-top: 20px; 
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                overflow: hidden;
+                position: relative;
+            }
+            
+            .card::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 1px;
+                background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            }
+            
+            .card:hover {
+                transform: translateY(-5px);
+                box-shadow: 
+                    0 30px 70px rgba(0, 0, 0, 0.3),
+                    0 0 0 1px rgba(255, 255, 255, 0.2);
+            }
+            .actions { display: flex; gap: 15px; flex-wrap: wrap; }
+            
+            /* Professional Buttons */
+            button, .btn { 
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: #fff; 
+                border: none; 
+                padding: 12px 24px; 
+                border-radius: 12px; 
+                cursor: pointer; 
+                font-weight: 600; 
+                text-decoration: none; 
+                display: inline-flex; 
+                align-items: center; 
+                gap: 8px;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+                position: relative;
+                overflow: hidden;
+            }
+            
+            button::before, .btn::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+                transition: left 0.5s;
+            }
+            
+            button:hover::before, .btn:hover::before {
+                left: 100%;
+            }
+            
+            button:hover, .btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+            }
+            
+            button.secondary, .btn.secondary { 
+                background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+                box-shadow: 0 4px 15px rgba(240, 147, 251, 0.3);
+            }
+            
+            button.secondary:hover, .btn.secondary:hover {
+                box-shadow: 0 8px 25px rgba(240, 147, 251, 0.4);
+            }
+            /* Professional Table Styling */
+            table { 
+                width: 100%; 
+                border-collapse: collapse; 
+                margin-top: 20px; 
+                border-radius: 12px;
+                overflow: hidden;
+                box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            }
+            
+            th, td { 
+                text-align: left; 
+                padding: 15px 20px; 
+                border-bottom: 1px solid rgba(0, 0, 0, 0.05); 
+                font-size: 14px;
+                transition: background 0.3s ease;
+            }
+            
+            th { 
+                background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+                text-transform: uppercase; 
+                letter-spacing: 0.05em; 
+                font-size: 12px; 
+                font-weight: 700;
+                color: #4a5568;
+                border-bottom: 2px solid #e2e8f0;
+            }
+            
+            tbody tr:hover {
+                background: rgba(102, 126, 234, 0.05);
+            }
+            
+            tbody tr:last-child td {
+                border-bottom: none;
+            }
+            /* Professional Badges */
+            .badge { 
+                display: inline-block; 
+                padding: 6px 12px; 
+                border-radius: 20px; 
+                font-size: 11px; 
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            }
+            .badge.pending { background: linear-gradient(135deg, #fef3c7 0%, #fbbf24 100%); color: #92400e; }
+            .badge.approved { background: linear-gradient(135deg, #dcfce7 0%, #22c55e 100%); color: #166534; }
+            .badge.rejected { background: linear-gradient(135deg, #fee2e2 0%, #ef4444 100%); color: #991b1b; }
+            
             form.inline { display: inline; }
-            .msg { padding: 12px 14px; border-radius: 10px; margin: 12px 0; font-weight: 600; }
-            .msg.error { background: #fee2e2; color: #991b1b; }
-            .msg.success { background: #dcfce7; color: #166534; }
-            label { font-weight: 600; font-size: 13px; display: block; margin-bottom: 6px; }
-            input, select, textarea { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #e5e7eb; margin-bottom: 12px; font-size: 14px; }
-            input:focus, select:focus, textarea:focus { outline: 2px solid #a5b4fc; }
+            
+            /* Professional Messages */
+            .msg { 
+                padding: 16px 20px; 
+                border-radius: 12px; 
+                margin: 15px 0; 
+                font-weight: 600;
+                border-left: 4px solid;
+                backdrop-filter: blur(10px);
+            }
+            .msg.error { 
+                background: rgba(254, 226, 226, 0.9); 
+                color: #991b1b; 
+                border-color: #ef4444;
+                box-shadow: 0 4px 15px rgba(239, 68, 68, 0.2);
+            }
+            .msg.success { 
+                background: rgba(220, 252, 231, 0.9); 
+                color: #166534; 
+                border-color: #22c55e;
+                box-shadow: 0 4px 15px rgba(34, 197, 94, 0.2);
+            }
+            
+            /* Professional Form Inputs */
+            label { font-weight: 600; font-size: 14px; display: block; margin-bottom: 8px; color: #374151; }
+            input, select, textarea { 
+                width: 100%; 
+                padding: 12px 16px; 
+                border-radius: 12px; 
+                border: 2px solid #e5e7eb; 
+                margin-bottom: 15px; 
+                font-size: 14px;
+                transition: all 0.3s ease;
+                background: rgba(255, 255, 255, 0.9);
+            }
+            input:focus, select:focus, textarea:focus { 
+                outline: none; 
+                border-color: #667eea;
+                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                background: rgba(255, 255, 255, 1);
+            }
             .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
             
             /* Enhanced Navigation Layout */
