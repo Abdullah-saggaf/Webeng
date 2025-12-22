@@ -1,0 +1,129 @@
+/* Space QR View Styles */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.info-card {
+    background: white;
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    margin-bottom: 20px;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.space-number {
+    font-size: 48px;
+    font-weight: 700;
+    color: #4f46e5;
+    margin-bottom: 10px;
+}
+
+.area-name {
+    font-size: 18px;
+    color: #6b7280;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.area-type {
+    display: inline-block;
+    padding: 8px 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    margin-top: 10px;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 12px 30px;
+    border-radius: 30px;
+    font-size: 18px;
+    font-weight: 700;
+    text-align: center;
+    margin: 20px 0;
+    width: 100%;
+}
+
+.status-available {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+}
+
+.status-occupied {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+}
+
+.info-grid {
+    display: grid;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.info-item {
+    padding: 15px;
+    background: #f9fafb;
+    border-radius: 10px;
+    border-left: 4px solid #667eea;
+}
+
+.info-label {
+    font-size: 12px;
+    color: #6b7280;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 5px;
+}
+
+.info-value {
+    font-size: 16px;
+    color: #111827;
+    font-weight: 600;
+}
+
+.booking-details {
+    background: #fef3c7;
+    border-left-color: #f59e0b;
+}
+
+.timestamp {
+    text-align: center;
+    color: white;
+    font-size: 13px;
+    margin-top: 15px;
+    opacity: 0.9;
+}
+
+@media (max-width: 768px) {
+    .space-number {
+        font-size: 36px;
+    }
+    
+    .info-card {
+        padding: 20px;
+    }
+}

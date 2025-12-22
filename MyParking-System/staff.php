@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/module01/auth.php';
 require_once __DIR__ . '/module01/layout.php';
-require_once __DIR__ . '/database/db_functions.php';
+require_once __DIR__ . '/database/db_config.php';
 
 // Require safety_staff role
 requireRole(['safety_staff']);

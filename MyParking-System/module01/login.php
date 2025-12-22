@@ -1,12 +1,13 @@
 <?php
 require_once __DIR__ . '/auth.php';
-require_once __DIR__ . '/../database/db_functions.php';
+require_once __DIR__ . '/../database/db_config.php';
 
 // Login/landing controller: handles logout, CSRF, throttling, credential check, and view render
 
 // Handle logout request early (support GET and POST, prefer POST with CSRF)
-if ((isset($_GET['logout']) && $_GET['logout'] === '1') ||
-    (isset($_POST['logout']) && $_POST['logout'] === '1')) {
+// Only process if user is actually logged in to avoid redirect loops
+if (isLoggedIn() && ((isset($_GET['logout']) && $_GET['logout'] === '1') ||
+    (isset($_POST['logout']) && $_POST['logout'] === '1'))) {
     // For POST, validate CSRF token if provided
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $postedToken = $_POST['csrf_token'] ?? '';
@@ -23,6 +24,8 @@ if ((isset($_GET['logout']) && $_GET['logout'] === '1') ||
                 setcookie(session_name(), '', time() - 42000, '/');
             }
             session_destroy();
+            // Start new session for fresh login
+            session_start();
             header('Location: ' . appUrl('/login.php'));
             exit();
         }
@@ -35,6 +38,8 @@ if ((isset($_GET['logout']) && $_GET['logout'] === '1') ||
             setcookie(session_name(), '', time() - 42000, '/');
         }
         session_destroy();
+        // Start new session for fresh login
+        session_start();
         header('Location: ' . appUrl('/login.php'));
         exit();
     }

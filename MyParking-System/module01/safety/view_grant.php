@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../auth.php';
-require_once __DIR__ . '/../../database/db_functions.php';
+require_once __DIR__ . '/../../database/db_config.php';
 
 requireRole(['safety_staff', 'fk_staff']);
 

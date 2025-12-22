@@ -283,7 +283,7 @@ function renderHeader($title = 'MyParking') {
                         <?php if ($role === 'student'): ?>
                             <a href="<?php echo htmlspecialchars(APP_BASE_PATH . '/user.php'); ?>">Dashboard</a>
                             <a href="<?php echo appUrl('/student/main.php'); ?>">Vehicles</a>
-                            <a href="#">Parking Booking</a> <!-- TODO: link -->
+                            <a href="<?php echo htmlspecialchars(APP_BASE_PATH . '/module02/student/parkingAvailability.php'); ?>">Parking Availability</a>
                             <a href="#">My Summons</a> <!-- TODO: link -->
                             <div class="dropdown">
                                 <button class="dropdown-toggle" onclick="toggleDropdown(event)">More ▼</button>
@@ -296,20 +296,27 @@ function renderHeader($title = 'MyParking') {
                         <?php elseif ($role === 'fk_staff'): ?>
                             <a href="<?php echo htmlspecialchars(APP_BASE_PATH . '/admin.php'); ?>">Dashboard</a>
                             <a href="<?php echo appUrl('/admin/users.php'); ?>">Manage Users</a>
-                            <a href="<?php echo appUrl('/admin/reports.php'); ?>">Reports</a>
-                            <a href="#">Parking Areas</a> <!-- TODO: link -->
+                            <a href="<?php echo htmlspecialchars(APP_BASE_PATH . '/module02/admin/parkingDashboard.php'); ?>">Parking System</a>
+                            <div class="dropdown">
+                                <button class="dropdown-toggle" onclick="toggleDropdown(event)">Parking ▼</button>
+                                <div class="dropdown-menu">
+                                    <a href="<?php echo htmlspecialchars(APP_BASE_PATH . '/module02/admin/manage_parking_areas.php'); ?>">Manage Areas</a>
+                                    <a href="<?php echo htmlspecialchars(APP_BASE_PATH . '/module02/admin/manage_parking_spaces.php'); ?>">Manage Spaces</a>
+                                    <a href="<?php echo htmlspecialchars(APP_BASE_PATH . '/module02/shared/availability.php'); ?>">View Availability</a>
+                                </div>
+                            </div>
                             <div class="dropdown">
                                 <button class="dropdown-toggle" onclick="toggleDropdown(event)">More ▼</button>
                                 <div class="dropdown-menu">
-                                    <a href="#">Parking Spaces</a> <!-- TODO: link -->
-                                    <a href="#">System Settings</a> <!-- TODO: link -->
+                                    <a href="<?php echo appUrl('/admin/reports.php'); ?>">Reports</a>
+                                    <a href="#">System Settings</a>
                                 </div>
                             </div>
                         <?php elseif ($role === 'safety_staff'): ?>
                             <a href="<?php echo htmlspecialchars(APP_BASE_PATH . '/staff.php'); ?>">Dashboard</a>
                             <a href="<?php echo appUrl('/safety/vehicle-approvals.php'); ?>">Vehicle Approvals</a>
+                            <a href="<?php echo htmlspecialchars(APP_BASE_PATH . '/module02/shared/availability.php'); ?>">Parking Availability</a>
                             <a href="#">Traffic Summons</a> <!-- TODO: link -->
-                            <a href="#">Safety Dashboard</a> <!-- TODO: link -->
                             <div class="dropdown">
                                 <button class="dropdown-toggle" onclick="toggleDropdown(event)">More ▼</button>
                                 <div class="dropdown-menu">
