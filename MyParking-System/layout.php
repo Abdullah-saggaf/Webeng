@@ -1021,10 +1021,10 @@ function renderHeader($title = 'MyParking') {
                     <a href="<?php echo appUrl('/admin/reports.php'); ?>" class="<?php echo isActive('reports.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-chart-bar"></i> Reports
                     </a>
-                    <a href="#" class="<?php echo isActive('parking-areas.php', $currentPage, $currentPath); ?>">
+                    <a href="<?php echo APP_BASE_PATH . '/module02/admin/manage_parking_areas.php'; ?>" class="<?php echo isActive('manage_parking_areas.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-map-marked-alt"></i> Parking Areas
                     </a>
-                    <a href="#" class="<?php echo isActive('parking-spaces.php', $currentPage, $currentPath); ?>">
+                    <a href="<?php echo APP_BASE_PATH . '/module02/admin/manage_parking_spaces.php'; ?>" class="<?php echo isActive('manage_parking_spaces.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-th"></i> Parking Spaces
                     </a>
                     <a href="#" class="<?php echo isActive('system-settings.php', $currentPage, $currentPath); ?>">

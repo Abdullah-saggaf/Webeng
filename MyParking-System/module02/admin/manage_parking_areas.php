@@ -109,7 +109,7 @@ $stmt = $db->prepare($sql);
 $stmt->execute($params);
 $areas = $stmt->fetchAll();
 
-require_once __DIR__ . '/../../module01/layout.php';
+require_once __DIR__ . '/../../layout.php';
 renderHeader('Manage Parking Areas');
 ?>
 

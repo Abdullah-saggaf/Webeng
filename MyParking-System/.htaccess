@@ -1,0 +1,11 @@
+Options +FollowSymLinks
+RewriteEngine On
+
+# Allow access from all
+Require all granted
+
+# Enable PHP execution
+AddType application/x-httpd-php .php
+
+# Set default charset
+AddDefaultCharset UTF-8
