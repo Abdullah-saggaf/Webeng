@@ -83,7 +83,7 @@ renderHeader('Safety Staff Dashboard');
 <div class="card" style="margin-top: 24px;">
     <h2>Quick Actions</h2>
     <div class="actions">
-        <a href="<?php echo appUrl('/safety/reports.php'); ?>" class="btn secondary">View Reports</a>
+        <a href="<?php echo appUrl('/safety/reports.php'); ?>" class="btn">View Reports</a>
         <a href="<?php echo appUrl('/safety/vehicle-approvals.php'); ?>" class="btn">Go to Approvals</a>
     </div>
 </div>

@@ -97,8 +97,8 @@ renderHeader('Admin Dashboard');
 <div class="card" style="margin-top: 24px;">
     <h2>Quick Actions</h2>
     <div class="actions">
-        <a href="<?php echo appUrl('/admin/users.php'); ?>" class="btn secondary">User Management</a>
-        <a href="<?php echo appUrl('/admin/reports.php'); ?>" class="btn secondary">View Reports</a>
+        <a href="<?php echo appUrl('/admin/users.php'); ?>" class="btn">User Management</a>
+        <a href="<?php echo appUrl('/admin/reports.php'); ?>" class="btn">View Reports</a>
     </div>
 </div>
 
