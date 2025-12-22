@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/module01/auth.php';
 
 // Shared shell: header/nav with role-aware links
 function renderHeader($title = 'MyParking') {
