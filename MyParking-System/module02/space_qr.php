@@ -102,6 +102,8 @@ $verification_url = $base . '/module02/pageSpaceInfo.php?space_id=' . $space_id;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QR Code - <?php echo htmlspecialchars($space['space_number']); ?></title>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <!-- QRCode.js library from CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
@@ -189,7 +191,13 @@ $verification_url = $base . '/module02/pageSpaceInfo.php?space_id=' . $space_id;
             cursor: pointer;
             transition: all 0.3s ease;
             text-decoration: none;
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn i {
+            font-size: 16px;
         }
         .btn-primary {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -222,29 +230,29 @@ $verification_url = $base . '/module02/pageSpaceInfo.php?space_id=' . $space_id;
 </head>
 <body>
     <div class="qr-card">
-        <div class="space-number">🅿️ <?php echo htmlspecialchars($space['space_number']); ?></div>
+        <div class="space-number"><i class="fas fa-parking"></i> <?php echo htmlspecialchars($space['space_number']); ?></div>
         <div class="area-info"><?php echo htmlspecialchars($space['parkingLot_name']); ?></div>
         <div class="area-type"><?php echo htmlspecialchars($space['parkingLot_type']); ?></div>
         
         <div id="qrcode-space-<?= $space_id ?>"></div>
         
         <div style="font-size: 11px; color: #9ca3af; margin-top: 15px;">
-            📱 Scan with phone camera to view space details
+            <i class="fas fa-mobile-alt"></i> Scan with phone camera to view space details
         </div>
         
         <div class="url-display">
-            🔗 <?php echo htmlspecialchars($verification_url); ?>
+            <i class="fas fa-link"></i> <?php echo htmlspecialchars($verification_url); ?>
         </div>
         
         <div class="buttons">
             <a href="<?= htmlspecialchars($verification_url) ?>" class="btn btn-primary" target="_blank">
-                📱 Open Space Info
+                <i class="fas fa-mobile-alt"></i> Open Space Info
             </a>
             <button onclick="copyToClipboard('<?= htmlspecialchars($verification_url, ENT_QUOTES) ?>')" class="btn btn-success">
-                📋 Copy URL
+                <i class="fas fa-clipboard"></i> Copy URL
             </button>
             <button onclick="window.print()" class="btn btn-secondary">
-                🖨️ Print QR
+                <i class="fas fa-print"></i> Print QR
             </button>
         </div>
     </div>
@@ -277,7 +285,7 @@ $verification_url = $base . '/module02/pageSpaceInfo.php?space_id=' . $space_id;
     function copyToClipboard(text) {
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(text).then(function() {
-                alert('✅ URL copied to clipboard!\n\n' + text);
+                alert('✔ URL copied to clipboard!\n\n' + text);
             }).catch(function(err) {
                 fallbackCopy(text);
             });
@@ -297,7 +305,7 @@ $verification_url = $base . '/module02/pageSpaceInfo.php?space_id=' . $space_id;
             document.execCommand('copy');
             alert('✅ URL copied to clipboard!');
         } catch (err) {
-            alert('❌ Failed to copy URL');
+            alert('✖ Failed to copy URL');
         }
         document.body.removeChild(textarea);
     }

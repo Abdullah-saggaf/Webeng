@@ -69,18 +69,18 @@ function mapStatusToDisplay($rawStatus, $columnName, $columnType): array {
     // Handle is_available (boolean: 1 = Available, 0 = Not Available/Occupied)
     if ($columnName === 'is_available') {
         if ($rawStatus == 1 || $rawStatus === 'true' || $rawStatus === true) {
-            return ['status' => 'available', 'text' => 'AVAILABLE', 'icon' => '✅'];
+            return ['status' => 'available', 'text' => 'AVAILABLE', 'icon' => '<i class="fas fa-check-circle"></i>'];
         } else {
-            return ['status' => 'occupied', 'text' => 'OCCUPIED', 'icon' => '🚗'];
+            return ['status' => 'occupied', 'text' => 'OCCUPIED', 'icon' => '<i class="fas fa-car"></i>'];
         }
     }
     
     // Handle is_occupied (boolean: 1 = Occupied, 0 = Available)
     if ($columnName === 'is_occupied') {
         if ($rawStatus == 1 || $rawStatus === 'true' || $rawStatus === true) {
-            return ['status' => 'occupied', 'text' => 'OCCUPIED', 'icon' => '🚗'];
+            return ['status' => 'occupied', 'text' => 'OCCUPIED', 'icon' => '<i class="fas fa-car"></i>'];
         } else {
-            return ['status' => 'available', 'text' => 'AVAILABLE', 'icon' => '✅'];
+            return ['status' => 'available', 'text' => 'AVAILABLE', 'icon' => '<i class="fas fa-check-circle"></i>'];
         }
     }
     
@@ -88,19 +88,19 @@ function mapStatusToDisplay($rawStatus, $columnName, $columnType): array {
     $rawStatusLower = strtolower(trim($rawStatus ?? ''));
     
     if (in_array($rawStatusLower, ['available', 'free', 'open', 'vacant'])) {
-        return ['status' => 'available', 'text' => 'AVAILABLE', 'icon' => '✅'];
+        return ['status' => 'available', 'text' => 'AVAILABLE', 'icon' => '<i class="fas fa-check-circle"></i>'];
     }
     
     if (in_array($rawStatusLower, ['occupied', 'taken', 'reserved', 'booked', 'in use'])) {
-        return ['status' => 'occupied', 'text' => 'OCCUPIED', 'icon' => '🚗'];
+        return ['status' => 'occupied', 'text' => 'OCCUPIED', 'icon' => '<i class="fas fa-car"></i>'];
     }
     
     if (in_array($rawStatusLower, ['closed', 'maintenance', 'unavailable', 'disabled', 'out of service'])) {
-        return ['status' => 'closed', 'text' => 'CLOSED', 'icon' => '🚫'];
+        return ['status' => 'closed', 'text' => 'CLOSED', 'icon' => '<i class="fas fa-ban"></i>'];
     }
     
     // Default: assume available if we can't determine
-    return ['status' => 'available', 'text' => 'AVAILABLE', 'icon' => '✅'];
+    return ['status' => 'available', 'text' => 'AVAILABLE', 'icon' => '<i class="fas fa-check-circle"></i>'];
 }
 
 // Database connection
@@ -163,14 +163,14 @@ try {
         
         // Override with booking if occupied
         if ($currentBooking) {
-            $statusDisplay = ['status' => 'occupied', 'text' => 'OCCUPIED', 'icon' => '🚗'];
+            $statusDisplay = ['status' => 'occupied', 'text' => 'OCCUPIED', 'icon' => '<i class="fas fa-car"></i>'];
         }
     } else {
         // No status column, determine from booking only
         if ($currentBooking) {
-            $statusDisplay = ['status' => 'occupied', 'text' => 'OCCUPIED', 'icon' => '🚗'];
+            $statusDisplay = ['status' => 'occupied', 'text' => 'OCCUPIED', 'icon' => '<i class="fas fa-car"></i>'];
         } else {
-            $statusDisplay = ['status' => 'available', 'text' => 'AVAILABLE', 'icon' => '✅'];
+            $statusDisplay = ['status' => 'available', 'text' => 'AVAILABLE', 'icon' => '<i class="fas fa-check-circle"></i>'];
         }
     }
     
@@ -193,6 +193,8 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($space['space_number']); ?> - Parking Space Info</title>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
         * {
             margin: 0;
@@ -419,7 +421,7 @@ try {
     <div class="container">
         <div class="card">
             <div class="header">
-                <div class="space-icon">🅿️</div>
+                <div class="space-icon"><i class="fas fa-parking"></i></div>
                 <div class="space-number"><?php echo htmlspecialchars($space['space_number']); ?></div>
                 <div class="location"><?php echo htmlspecialchars($space['parkingLot_name']); ?></div>
                 <div class="badge"><?php echo htmlspecialchars($space['parkingLot_type']); ?></div>
@@ -446,20 +448,20 @@ try {
                 <?php endif; ?>
                 
                 <div class="info-item">
-                    <div class="info-label">📍 Space ID</div>
+                    <div class="info-label"><i class="fas fa-map-marker-alt"></i> Space ID</div>
                     <div class="info-value">#<?php echo $space['space_ID']; ?></div>
                 </div>
                 
                 <div class="info-item">
-                    <div class="info-label">🎫 Parking Type</div>
+                    <div class="info-label"><i class="fas fa-ticket-alt"></i> Parking Type</div>
                     <div class="info-value">
-                        <?php echo $space['is_booking_lot'] ? '📅 Reservation Required' : '🚗 First-Come First-Served'; ?>
+                        <?php echo $space['is_booking_lot'] ? '<i class="fas fa-calendar-check"></i> Reservation Required' : '<i class="fas fa-car"></i> First-Come First-Served'; ?>
                     </div>
                 </div>
                 
                 <?php if (isset($space['qr_code_value']) && !empty($space['qr_code_value'])): ?>
                 <div class="info-item">
-                    <div class="info-label">🔖 QR Code ID</div>
+                    <div class="info-label"><i class="fas fa-tag"></i> QR Code ID</div>
                     <div class="info-value" style="font-family: monospace; font-size: 11px; word-break: break-all; color: #6b7280;">
                         <?php echo htmlspecialchars($space['qr_code_value']); ?>
                     </div>
@@ -477,7 +479,7 @@ try {
         </div>
         
         <div class="footer">
-            ⏰ Updated: <?php echo date('M d, Y g:i A'); ?>
+            <i class="far fa-clock"></i> Updated: <?php echo date('M d, Y g:i A'); ?>
         </div>
     </div>
     
