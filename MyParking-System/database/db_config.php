@@ -354,34 +354,46 @@ function getParkingLotAvailability() {
 // Ticket Functions
 // ============================================
 
-function createTicket($vehicle_id, $user_id, $violation_id, $description) {
+function createTicket($vehicleId, $userId, $violationId, $description, $issuedAt = null) {
     $db = getDB();
-    $sql = "INSERT INTO Ticket (vehicle_ID, user_ID, violation_ID, ticket_status, description) 
-            VALUES (:vehicle_id, :user_id, :violation_id, 'Unpaid', :description)";
+    $sql = "INSERT INTO Ticket (vehicle_ID, user_ID, violation_ID, ticket_status, issued_at, description) 
+            VALUES (:vehicle_id, :user_id, :violation_id, 'Unpaid', :issued_at, :description)";
     $stmt = $db->prepare($sql);
     return $stmt->execute([
-        ':vehicle_id' => $vehicle_id,
-        ':user_id' => $user_id,
-        ':violation_id' => $violation_id,
+        ':vehicle_id' => $vehicleId,
+        ':user_id' => $userId,
+        ':violation_id' => $violationId,
+        ':issued_at' => $issuedAt ?? date('Y-m-d H:i:s'),
         ':description' => $description
     ]);
 }
 
-function getTicketsByUser($user_id) {
+function getTicketsByUser($userId) {
     $db = getDB();
-    $sql = "SELECT * FROM user_tickets_detail WHERE email IN (SELECT email FROM User WHERE user_ID = :user_id)";
+    $sql = "SELECT 
+                t.*,
+                v.license_plate,
+                v.vehicle_type,
+                vl.violation_type,
+                vl.violation_points,
+                vl.fine_amount
+            FROM Ticket t
+            INNER JOIN Vehicle v ON t.vehicle_ID = v.vehicle_ID
+            INNER JOIN Violation vl ON t.violation_ID = vl.violation_ID
+            WHERE t.user_ID = :user_id
+            ORDER BY t.issued_at DESC";
     $stmt = $db->prepare($sql);
-    $stmt->execute([':user_id' => $user_id]);
+    $stmt->execute([':user_id' => $userId]);
     return $stmt->fetchAll();
 }
 
-function updateTicketStatus($ticket_id, $status) {
+function updateTicketStatus($ticketId, $newStatus) {
     $db = getDB();
     $sql = "UPDATE Ticket SET ticket_status = :status WHERE ticket_ID = :ticket_id";
     $stmt = $db->prepare($sql);
     return $stmt->execute([
-        ':ticket_id' => $ticket_id,
-        ':status' => $status
+        ':status' => $newStatus,
+        ':ticket_id' => $ticketId
     ]);
 }
 
@@ -461,6 +473,180 @@ function getStudentVehicleSummary() {
             GROUP BY u.user_ID, u.username, u.email
             ORDER BY total_vehicles DESC, u.username";
     $stmt = $db->query($sql);
+    return $stmt->fetchAll();
+}
+
+// ============================================
+// Module 4: Traffic Summons & Demerit Points Functions
+// ============================================
+
+function getAllViolations() {
+    $db = getDB();
+    $sql = "SELECT * FROM Violation ORDER BY violation_type";
+    $stmt = $db->query($sql);
+    return $stmt->fetchAll();
+}
+
+function searchTickets($query) {
+    $db = getDB();
+    $sql = "SELECT 
+                t.*,
+                v.license_plate,
+                v.vehicle_type,
+                u.user_ID,
+                u.username,
+                u.email,
+                vl.violation_type,
+                vl.violation_points,
+                vl.fine_amount
+            FROM Ticket t
+            INNER JOIN Vehicle v ON t.vehicle_ID = v.vehicle_ID
+            INNER JOIN User u ON t.user_ID = u.user_ID
+            INNER JOIN Violation vl ON t.violation_ID = vl.violation_ID
+            WHERE v.license_plate LIKE :query 
+               OR u.user_ID LIKE :query 
+               OR u.username LIKE :query
+            ORDER BY t.issued_at DESC";
+    $stmt = $db->prepare($sql);
+    $stmt->execute([':query' => '%' . $query . '%']);
+    return $stmt->fetchAll();
+}
+
+function ensureUserPointsRow($userId) {
+    $db = getDB();
+    $sql = "INSERT IGNORE INTO User_points (user_ID, total_points) VALUES (:user_id, 0)";
+    $stmt = $db->prepare($sql);
+    return $stmt->execute([':user_id' => $userId]);
+}
+
+function addUserPoints($userId, $pointsToAdd) {
+    ensureUserPointsRow($userId);
+    $db = getDB();
+    $sql = "UPDATE User_points SET total_points = total_points + :points WHERE user_ID = :user_id";
+    $stmt = $db->prepare($sql);
+    return $stmt->execute([
+        ':user_id' => $userId,
+        ':points' => $pointsToAdd
+    ]);
+}
+
+function getUserTotalPoints($userId) {
+    $db = getDB();
+    $sql = "SELECT total_points FROM User_points WHERE user_ID = :user_id";
+    $stmt = $db->prepare($sql);
+    $stmt->execute([':user_id' => $userId]);
+    $result = $stmt->fetch();
+    return $result ? (int)$result['total_points'] : 0;
+}
+
+function getDashboardStats($filters = []) {
+    $db = getDB();
+    
+    // Base WHERE clause
+    $where = "WHERE 1=1";
+    $params = [];
+    
+    if (!empty($filters['date_from'])) {
+        $where .= " AND t.issued_at >= :date_from";
+        $params[':date_from'] = $filters['date_from'];
+    }
+    
+    if (!empty($filters['date_to'])) {
+        $where .= " AND t.issued_at <= :date_to";
+        $params[':date_to'] = $filters['date_to'] . ' 23:59:59';
+    }
+    
+    if (!empty($filters['violation_id'])) {
+        $where .= " AND t.violation_ID = :violation_id";
+        $params[':violation_id'] = $filters['violation_id'];
+    }
+    
+    if (!empty($filters['status'])) {
+        $where .= " AND t.ticket_status = :status";
+        $params[':status'] = $filters['status'];
+    }
+    
+    // Total tickets
+    $sql = "SELECT COUNT(*) as total_tickets FROM Ticket t $where";
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    $totalTickets = $stmt->fetch()['total_tickets'];
+    
+    // Total points issued
+    $sql = "SELECT SUM(v.violation_points) as total_points 
+            FROM Ticket t 
+            INNER JOIN Violation v ON t.violation_ID = v.violation_ID 
+            $where";
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    $totalPoints = $stmt->fetch()['total_points'] ?? 0;
+    
+    // Tickets by violation type
+    $sql = "SELECT v.violation_type, COUNT(*) as count 
+            FROM Ticket t 
+            INNER JOIN Violation v ON t.violation_ID = v.violation_ID 
+            $where 
+            GROUP BY v.violation_type 
+            ORDER BY count DESC";
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    $ticketsByViolation = $stmt->fetchAll();
+    
+    // Tickets by status
+    $sql = "SELECT t.ticket_status, COUNT(*) as count 
+            FROM Ticket t 
+            $where 
+            GROUP BY t.ticket_status 
+            ORDER BY count DESC";
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    $ticketsByStatus = $stmt->fetchAll();
+    
+    return [
+        'total_tickets' => $totalTickets,
+        'total_points_issued' => $totalPoints,
+        'tickets_by_violation_type' => $ticketsByViolation,
+        'tickets_by_status' => $ticketsByStatus
+    ];
+}
+
+function getVehicleByPlate($licensePlate) {
+    $db = getDB();
+    $sql = "SELECT * FROM Vehicle WHERE license_plate = :plate LIMIT 1";
+    $stmt = $db->prepare($sql);
+    $stmt->execute([':plate' => $licensePlate]);
+    return $stmt->fetch();
+}
+
+function getVehicleByUserId($userId) {
+    $db = getDB();
+    $sql = "SELECT * FROM Vehicle WHERE user_ID = :user_id ORDER BY vehicle_ID DESC LIMIT 1";
+    $stmt = $db->prepare($sql);
+    $stmt->execute([':user_id' => $userId]);
+    return $stmt->fetch();
+}
+
+function getLatestTickets($limit = 20) {
+    $db = getDB();
+    $sql = "SELECT 
+                t.*,
+                v.license_plate,
+                v.vehicle_type,
+                u.user_ID,
+                u.username,
+                u.email,
+                vl.violation_type,
+                vl.violation_points,
+                vl.fine_amount
+            FROM Ticket t
+            INNER JOIN Vehicle v ON t.vehicle_ID = v.vehicle_ID
+            INNER JOIN User u ON t.user_ID = u.user_ID
+            INNER JOIN Violation vl ON t.violation_ID = vl.violation_ID
+            ORDER BY t.issued_at DESC
+            LIMIT :limit";
+    $stmt = $db->prepare($sql);
+    $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
+    $stmt->execute();
     return $stmt->fetchAll();
 }
 ?>

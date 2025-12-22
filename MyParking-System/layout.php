@@ -999,13 +999,13 @@ function renderHeader($title = 'MyParking') {
                     <a href="#" class="<?php echo isActive('parking-booking.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-calendar-check"></i> Parking Booking
                     </a>
-                    <a href="#" class="<?php echo isActive('my-summons.php', $currentPage, $currentPath); ?>">
+                    <a href="<?php echo APP_BASE_PATH . '/module04/student/my_summons.php'; ?>" class="<?php echo isActive('my_summons.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-file-invoice"></i> My Summons
                     </a>
                     <a href="#" class="<?php echo isActive('my-bookings.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-clipboard-list"></i> My Bookings
                     </a>
-                    <a href="#" class="<?php echo isActive('demerit-points.php', $currentPage, $currentPath); ?>">
+                    <a href="<?php echo APP_BASE_PATH . '/module04/student/demerit_points.php'; ?>" class="<?php echo isActive('demerit_points.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-exclamation-triangle"></i> Demerit Points
                     </a>
                     <a href="#" class="<?php echo isActive('profile.php', $currentPage, $currentPath); ?>">
@@ -1037,13 +1037,13 @@ function renderHeader($title = 'MyParking') {
                     <a href="<?php echo appUrl('/safety/vehicle-approvals.php'); ?>" class="<?php echo isActive('vehicle-approvals.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-check-circle"></i> Vehicle Approvals
                     </a>
-                    <a href="#" class="<?php echo isActive('traffic-summons.php', $currentPage, $currentPath); ?>">
+                    <a href="<?php echo APP_BASE_PATH . '/module04/safety/traffic_summons.php'; ?>" class="<?php echo isActive('traffic_summons.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-exclamation-circle"></i> Traffic Summons
                     </a>
-                    <a href="#" class="<?php echo isActive('safety-dashboard.php', $currentPage, $currentPath); ?>">
+                    <a href="<?php echo APP_BASE_PATH . '/module04/safety/safety_dashboard.php'; ?>" class="<?php echo isActive('safety_dashboard.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-shield-alt"></i> Safety Dashboard
                     </a>
-                    <a href="#" class="<?php echo isActive('issue-summon.php', $currentPage, $currentPath); ?>">
+                    <a href="<?php echo APP_BASE_PATH . '/module04/safety/issue_summon.php'; ?>" class="<?php echo isActive('issue_summon.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-edit"></i> Issue Summon
                     </a>
                     <a href="<?php echo appUrl('/safety/reports.php'); ?>" class="<?php echo isActive('reports.php', $currentPage, $currentPath); ?>">
