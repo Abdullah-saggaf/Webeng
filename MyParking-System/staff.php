@@ -10,9 +10,13 @@ $user = currentUser();
 
 // Get pending vehicles
 $pendingVehicles = getPendingVehicles();
+$approvedVehicles = getApprovedVehicles();
+$rejectedVehicles = getRejectedVehicles();
 $stats = [
     'pending' => count($pendingVehicles),
-    'total_approvals' => count(getApprovedVehicles()) + count(getPendingVehicles()) + count(getRejectedVehicles())
+    'approved' => count($approvedVehicles),
+    'rejected' => count($rejectedVehicles),
+    'total_approvals' => count($approvedVehicles) + count($pendingVehicles) + count($rejectedVehicles)
 ];
 
 renderHeader('Safety Staff Dashboard');
@@ -24,10 +28,18 @@ renderHeader('Safety Staff Dashboard');
 </div>
 
 <!-- Statistics -->
-<div class="grid">
+<div class="grid" style="margin-top: 24px;">
     <div class="card">
         <h3>Pending Approvals</h3>
         <p style="font-size: 24px; font-weight: 700; color: #d97706;"><?php echo $stats['pending']; ?></p>
+    </div>
+    <div class="card">
+        <h3>Approved</h3>
+        <p style="font-size: 24px; font-weight: 700; color: #059669;"><?php echo $stats['approved']; ?></p>
+    </div>
+    <div class="card">
+        <h3>Rejected</h3>
+        <p style="font-size: 24px; font-weight: 700; color: #dc2626;"><?php echo $stats['rejected']; ?></p>
     </div>
     <div class="card">
         <h3>Total Processed</h3>

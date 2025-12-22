@@ -106,6 +106,19 @@ function renderHeader($title = 'MyParking') {
                 transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                 overflow: hidden;
                 position: relative;
+                min-width: 0;
+                box-sizing: border-box;
+            }
+            
+            .card h2, .card h3 {
+                font-size: clamp(16px, 2vw, 24px);
+                margin: 0 0 12px 0;
+                word-wrap: break-word;
+            }
+            
+            .card p {
+                font-size: clamp(12px, 1.5vw, 16px);
+                word-wrap: break-word;
             }
             
             .card::before {
@@ -124,6 +137,30 @@ function renderHeader($title = 'MyParking') {
                     0 30px 70px rgba(0, 0, 0, 0.3),
                     0 0 0 1px rgba(255, 255, 255, 0.2);
             }
+            
+            /* Responsive Card Adjustments */
+            @media (max-width: 1400px) {
+                .card {
+                    padding: 24px;
+                    border-radius: 16px;
+                }
+            }
+            
+            @media (max-width: 1024px) {
+                .card {
+                    padding: 20px;
+                    border-radius: 14px;
+                }
+            }
+            
+            @media (max-width: 768px) {
+                .card {
+                    padding: 16px;
+                    border-radius: 12px;
+                    margin-top: 15px;
+                }
+            }
+            
             .actions { display: flex; gap: 15px; flex-wrap: wrap; }
             
             /* Professional Buttons */
@@ -136,7 +173,7 @@ function renderHeader($title = 'MyParking') {
                 cursor: pointer; 
                 font-weight: 600; 
                 font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
-                font-size: 14px;
+                font-size: clamp(12px, 1.2vw, 14px);
                 letter-spacing: 0.3px;
                 text-decoration: none; 
                 display: inline-flex; 
@@ -146,6 +183,7 @@ function renderHeader($title = 'MyParking') {
                 box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
                 position: relative;
                 overflow: hidden;
+                white-space: nowrap;
             }
             
             button::before, .btn::before {
@@ -176,6 +214,19 @@ function renderHeader($title = 'MyParking') {
             button.secondary:hover, .btn.secondary:hover {
                 box-shadow: 0 8px 25px rgba(240, 147, 251, 0.4);
             }
+            
+            /* Responsive Button Adjustments */
+            @media (max-width: 1024px) {
+                button, .btn {
+                    padding: 10px 20px;
+                }
+            }
+            
+            @media (max-width: 768px) {
+                button, .btn {
+                    padding: 8px 16px;
+                }
+            }
             /* Professional Table Styling */
             table { 
                 width: 100%; 
@@ -184,24 +235,30 @@ function renderHeader($title = 'MyParking') {
                 border-radius: 12px;
                 overflow: hidden;
                 box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+                display: table;
             }
             
             th, td { 
                 text-align: left; 
                 padding: 15px 20px; 
                 border-bottom: 1px solid rgba(0, 0, 0, 0.05); 
-                font-size: 14px;
+                font-size: clamp(11px, 1.2vw, 14px);
                 transition: background 0.3s ease;
+                word-wrap: break-word;
+                max-width: 200px;
+                overflow: hidden;
+                text-overflow: ellipsis;
             }
             
             th { 
                 background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
                 text-transform: uppercase; 
                 letter-spacing: 0.05em; 
-                font-size: 12px; 
+                font-size: clamp(10px, 1vw, 12px); 
                 font-weight: 700;
                 color: #4a5568;
                 border-bottom: 2px solid #e2e8f0;
+                white-space: nowrap;
             }
             
             tbody tr:hover {
@@ -211,6 +268,39 @@ function renderHeader($title = 'MyParking') {
             tbody tr:last-child td {
                 border-bottom: none;
             }
+            
+            /* Responsive Table Adjustments */
+            @media (max-width: 1400px) {
+                th, td {
+                    padding: 12px 15px;
+                }
+            }
+            
+            @media (max-width: 1024px) {
+                th, td {
+                    padding: 10px 12px;
+                }
+                
+                table {
+                    font-size: 12px;
+                }
+            }
+            
+            @media (max-width: 768px) {
+                th, td {
+                    padding: 8px 10px;
+                }
+                
+                /* Optional: Make table scrollable on small screens */
+                .card {
+                    overflow-x: auto;
+                }
+                
+                table {
+                    min-width: 600px;
+                }
+            }
+            
             /* Professional Badges */
             .badge { 
                 display: inline-block; 
@@ -268,7 +358,89 @@ function renderHeader($title = 'MyParking') {
                 box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
                 background: rgba(255, 255, 255, 1);
             }
-            .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+            
+            /* Responsive Grid System */
+            .grid { 
+                display: grid; 
+                grid-template-columns: repeat(4, 1fr); 
+                gap: 20px;
+                width: 100%;
+                box-sizing: border-box;
+            }
+            
+            /* 2-column grid variant for pages with fewer stats */
+            .grid-2col {
+                grid-template-columns: repeat(2, 1fr) !important;
+                max-width: 800px;
+            }
+            
+            /* Grid items - Cards inside grid */
+            .grid > .card {
+                margin-top: 0 !important;
+                min-width: 0;
+                width: 100%;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                text-align: center;
+            }
+            
+            /* Responsive font sizes for grid stat cards */
+            .grid .card h3 {
+                font-size: clamp(12px, 1.5vw, 18px) !important;
+                margin-bottom: 8px !important;
+                margin-top: 0 !important;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                width: 100%;
+            }
+            
+            .grid .card p {
+                font-size: clamp(16px, 2.5vw, 28px) !important;
+                font-weight: 700 !important;
+                margin: 0 !important;
+            }
+            
+            /* Responsive adjustments for different zoom levels and screen sizes */
+            @media (max-width: 1600px) {
+                .grid {
+                    gap: 16px;
+                }
+            }
+            
+            @media (max-width: 1400px) {
+                .grid {
+                    gap: 14px;
+                }
+            }
+            
+            @media (max-width: 1200px) {
+                .grid {
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 12px;
+                }
+            }
+            
+            @media (max-width: 768px) {
+                .grid {
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: 10px;
+                }
+                
+                .grid-2col {
+                    grid-template-columns: 1fr !important;
+                }
+            }
+            
+            @media (max-width: 480px) {
+                .grid {
+                    grid-template-columns: 1fr;
+                    gap: 12px;
+                }
+            }
             
             /* Professional Clean Sidebar Design */
             .sidebar {
@@ -541,6 +713,8 @@ function renderHeader($title = 'MyParking') {
                 background: transparent;
                 width: calc(100vw - 280px);
                 box-sizing: border-box;
+                max-width: 100%;
+                overflow-x: hidden;
             }
             
             .main-content::before {

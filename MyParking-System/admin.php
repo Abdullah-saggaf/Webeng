@@ -26,7 +26,7 @@ renderHeader('Admin Dashboard');
 </div>
 
 <!-- Statistics -->
-<div class="grid">
+<div class="grid" style="margin-top: 24px;">
     <div class="card">
         <h3>Total Users</h3>
         <p style="font-size: 24px; font-weight: 700; color: #4f46e5;"><?php echo $stats['total_users']; ?></p>
