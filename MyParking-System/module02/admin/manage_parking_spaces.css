@@ -1,9 +1,11 @@
 /* Manage Parking Spaces Styles */
 
 .spaces-container {
-    max-width: 1600px;
-    margin: 0 auto;
+    max-width: 100%;
+    width: 100%;
+    margin: 0;
     padding: 30px;
+    box-sizing: border-box;
 }
 
 .page-title {
@@ -33,6 +35,152 @@
     border: 2px solid #ef4444;
 }
 
+/* Pending Bookings Section */
+.pending-bookings-section {
+    background: white;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    border: 2px solid #f59e0b;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #fef3c7;
+}
+
+.section-header h3 {
+    font-size: clamp(20px, 2.2vw, 24px);
+    color: #111827;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.section-header h3 i {
+    color: #f59e0b;
+    font-size: clamp(22px, 2.4vw, 26px);
+}
+
+.badge-count {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: clamp(12px, 1.1vw, 14px);
+    font-weight: 700;
+}
+
+.pending-bookings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+}
+
+.pending-booking-card {
+    background: linear-gradient(135deg, #fffbeb 0%, #ffffff 100%);
+    border: 2px solid #fbbf24;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.pending-booking-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(245, 158, 11, 0.25);
+}
+
+.card-header {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.student-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: clamp(14px, 1.3vw, 16px);
+    color: #111827;
+}
+
+.student-info i {
+    font-size: clamp(20px, 2vw, 24px);
+    color: #f59e0b;
+}
+
+.pending-badge {
+    background: white;
+    color: #92400e;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: clamp(11px, 1vw, 13px);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.card-body {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.info-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: clamp(13px, 1.2vw, 14px);
+    color: #374151;
+}
+
+.info-row i {
+    width: 20px;
+    color: #f59e0b;
+    font-size: clamp(14px, 1.3vw, 16px);
+}
+
+.card-footer {
+    padding: 15px;
+    background: white;
+}
+
+.btn-confirm-large {
+    width: 100%;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: clamp(14px, 1.3vw, 16px);
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-confirm-large:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.3);
+}
+
+.btn-confirm-large i {
+    font-size: clamp(16px, 1.5vw, 18px);
+}
+
 /* Controls Bar */
 .controls-bar {
     display: flex;
@@ -40,45 +188,61 @@
     align-items: center;
     margin-bottom: 25px;
     gap: 20px;
-    flex-wrap: wrap;
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .controls-left {
     display: flex;
     align-items: center;
-    gap: 15px;
-    flex-wrap: wrap;
+    gap: 12px;
 }
 
 .filter-form {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
 }
 
 .filter-form label {
     font-weight: 600;
     color: #374151;
+    font-size: clamp(13px, 1.2vw, 15px);
+    white-space: nowrap;
 }
 
 .filter-form select {
-    padding: 10px 15px;
+    padding: clamp(8px, 1vw, 12px) clamp(10px, 1.2vw, 14px);
     border: 2px solid #e5e7eb;
     border-radius: 8px;
-    font-size: 14px;
-    min-width: 200px;
+    font-size: clamp(13px, 1.2vw, 15px);
+    min-width: 180px;
+    transition: border-color 0.3s ease;
+    cursor: pointer;
+}
+
+.filter-form select:focus {
+    outline: none;
+    border-color: #3b82f6;
 }
 
 .btn-generate {
-    padding: 10px 20px;
+    padding: clamp(8px, 1vw, 12px) clamp(16px, 2vw, 24px);
     background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
     color: white;
     border: none;
     border-radius: 8px;
-    font-size: 14px;
+    font-size: clamp(13px, 1.2vw, 15px);
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
+    white-space: nowrap;
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .btn-generate:hover {
@@ -88,32 +252,46 @@
 
 .controls-right {
     display: flex;
-    gap: 10px;
+    gap: 12px;
     align-items: center;
-    flex-wrap: wrap;
 }
 
 .search-form {
     display: flex;
     gap: 10px;
+    align-items: center;
 }
 
 .search-form input {
-    padding: 10px 15px;
+    padding: clamp(8px, 1vw, 12px) clamp(12px, 1.5vw, 16px);
     border: 2px solid #e5e7eb;
     border-radius: 8px;
-    font-size: 14px;
-    min-width: 250px;
+    font-size: clamp(13px, 1.2vw, 15px);
+    width: 220px;
+    height: 40px;
+    box-sizing: border-box;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.search-form input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .btn-search, .btn-add {
-    padding: 10px 20px;
+    padding: clamp(8px, 1vw, 12px) clamp(16px, 2vw, 24px);
     border: none;
     border-radius: 8px;
-    font-size: 14px;
+    font-size: clamp(13px, 1.2vw, 15px);
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
+    white-space: nowrap;
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .btn-search {
@@ -207,13 +385,21 @@
 }
 
 .btn-edit, .btn-delete {
-    padding: 8px 14px;
+    padding: clamp(6px, 0.8vw, 10px) clamp(12px, 1.5vw, 16px);
     border: none;
     border-radius: 6px;
-    font-size: 13px;
+    font-size: clamp(12px, 1.1vw, 14px);
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
+    white-space: nowrap;
+    min-height: 36px;
+    min-width: 90px;
+    width: 90px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
 }
 
 .btn-edit {
@@ -234,6 +420,67 @@
 .btn-delete:hover {
     transform: translateY(-2px);
     box-shadow: 0 5px 10px rgba(239, 68, 68, 0.3);
+}
+
+.btn-confirm {
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-confirm:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 10px rgba(16, 185, 129, 0.3);
+}
+
+/* Pending Bookings */
+.pending-bookings-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.pending-booking-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    border-left: 3px solid #f59e0b;
+    border-radius: 8px;
+}
+
+.booking-student, .booking-date {
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.booking-student {
+    font-weight: 600;
+    color: #111827;
+}
+
+.booking-student i {
+    color: #f59e0b;
+}
+
+.booking-date {
+    color: #6b7280;
+}
+
+.booking-date i {
+    color: #f59e0b;
 }
 
 /* Modal */

@@ -996,13 +996,13 @@ function renderHeader($title = 'MyParking') {
                     <a href="<?php echo appUrl('/student/main.php'); ?>" class="<?php echo isActive('main.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-car"></i> Vehicles
                     </a>
-                    <a href="#" class="<?php echo isActive('parking-booking.php', $currentPage, $currentPath); ?>">
+                    <a href="<?php echo APP_BASE_PATH . '/module03/student/parking_booking.php'; ?>" class="<?php echo isActive('parking_booking.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-calendar-check"></i> Parking Booking
                     </a>
-                    <a href="#" class="<?php echo isActive('my-summons.php', $currentPage, $currentPath); ?>">
-                        <i class="fas fa-file-invoice"></i> My Summons
+                    <a href="<?php echo APP_BASE_PATH . '/module02/student/parkingAvailability.php'; ?>" class="<?php echo isActive('parkingAvailability.php', $currentPage, $currentPath); ?>">
+                        <i class="fas fa-chart-bar"></i> Parking Availability
                     </a>
-                    <a href="#" class="<?php echo isActive('my-bookings.php', $currentPage, $currentPath); ?>">
+                    <a href="<?php echo APP_BASE_PATH . '/module03/student/my_bookings.php'; ?>" class="<?php echo isActive('my_bookings.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-clipboard-list"></i> My Bookings
                     </a>
                     <a href="#" class="<?php echo isActive('demerit-points.php', $currentPage, $currentPath); ?>">

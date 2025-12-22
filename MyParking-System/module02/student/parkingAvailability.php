@@ -29,13 +29,20 @@ if ($selectedArea) {
 }
 
 // Total spaces
+$totalParams = [];
+$totalWhere = '';
+if ($selectedArea) {
+    $totalWhere = 'AND pl.parkingLot_ID = :area_id';
+    $totalParams[':area_id'] = $selectedArea;
+}
+
 $stmt = $db->prepare("
     SELECT COUNT(ps.space_ID) as total
     FROM ParkingSpace ps
     JOIN ParkingLot pl ON ps.parkingLot_ID = pl.parkingLot_ID
-    WHERE 1=1 $whereClause
+    WHERE 1=1 $totalWhere
 ");
-$stmt->execute($params);
+$stmt->execute($totalParams);
 $totalSpaces = $stmt->fetch()['total'];
 
 // Occupied spaces
@@ -78,15 +85,15 @@ $stmt = $db->prepare("
 $stmt->execute($chartParams);
 $chartData = $stmt->fetchAll();
 
-require_once __DIR__ . '/../../module01/layout.php';
+require_once __DIR__ . '/../../layout.php';
 renderHeader('Parking Availability');
 ?>
 
-<link rel="stylesheet" href="<?php echo APP_BASE_PATH; ?>/module02/student/parkingAvailability.css">
+<link rel="stylesheet" href="<?php echo APP_BASE_PATH; ?>/module02/student/parkingAvailability.css?v=<?php echo time(); ?>">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <div class="availability-container">
-    <h1 class="page-title">📊 Daily Parking Availability</h1>
+    <h2>Daily Parking Availability</h2>
     
     <!-- Filters -->
     <div class="filters-bar">
@@ -109,14 +116,14 @@ renderHeader('Parking Availability');
                 </select>
             </div>
             
-            <button type="submit" class="btn-search">🔍 Search</button>
+            <button type="submit" class="btn-search"><i class="fas fa-search"></i> Search</button>
         </form>
     </div>
     
     <!-- Summary Cards -->
     <div class="summary-grid">
         <div class="summary-card">
-            <div class="card-icon">🅿️</div>
+            <div class="card-icon"><i class="fas fa-parking"></i></div>
             <div class="card-content">
                 <div class="card-label">Total Spaces</div>
                 <div class="card-value"><?php echo $totalSpaces; ?></div>
@@ -124,7 +131,7 @@ renderHeader('Parking Availability');
         </div>
         
         <div class="summary-card card-occupied">
-            <div class="card-icon">🚗</div>
+            <div class="card-icon"><i class="fas fa-car"></i></div>
             <div class="card-content">
                 <div class="card-label">Occupied Spaces</div>
                 <div class="card-value"><?php echo $occupiedSpaces; ?></div>
@@ -132,7 +139,7 @@ renderHeader('Parking Availability');
         </div>
         
         <div class="summary-card card-available">
-            <div class="card-icon">✅</div>
+            <div class="card-icon"><i class="fas fa-check-circle"></i></div>
             <div class="card-content">
                 <div class="card-label">Available Spaces</div>
                 <div class="card-value"><?php echo $availableSpaces; ?></div>
@@ -142,7 +149,7 @@ renderHeader('Parking Availability');
     
     <!-- Chart -->
     <div class="chart-card">
-        <h3>📈 Occupancy Chart - Spaces Used by Area</h3>
+        <h3><i class="fas fa-chart-bar"></i> Occupancy Chart - Spaces Used by Area</h3>
         <div class="chart-container">
             <canvas id="occupancyChart"></canvas>
         </div>
@@ -150,7 +157,7 @@ renderHeader('Parking Availability');
     
     <!-- Legend -->
     <div class="info-box">
-        <h4>ℹ️ Information</h4>
+        <h4><i class="fas fa-info-circle"></i> Information</h4>
         <p><strong>Date:</strong> <?php echo date('F d, Y', strtotime($selectedDate)); ?></p>
         <p><strong>Last Updated:</strong> <?php echo date('g:i A'); ?></p>
         <p>Real-time parking availability data. Refresh the page to see the latest information.</p>

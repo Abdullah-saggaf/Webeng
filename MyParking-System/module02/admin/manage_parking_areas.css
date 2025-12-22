@@ -1,9 +1,11 @@
 /* Manage Parking Areas Styles */
 
 .areas-container {
-    max-width: 1400px;
-    margin: 0 auto;
+    max-width: 100%;
+    width: 100%;
+    margin: 0;
     padding: 30px;
+    box-sizing: border-box;
 }
 
 .page-title {
@@ -40,54 +42,82 @@
     align-items: center;
     margin-bottom: 25px;
     gap: 20px;
-    flex-wrap: wrap;
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .controls-left {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
 }
 
 .controls-left label {
     font-weight: 600;
     color: #374151;
+    font-size: clamp(13px, 1.2vw, 15px);
+    white-space: nowrap;
 }
 
 .controls-left select {
-    padding: 8px 12px;
+    padding: clamp(8px, 1vw, 12px) clamp(10px, 1.2vw, 14px);
     border: 2px solid #e5e7eb;
     border-radius: 8px;
-    font-size: 14px;
+    font-size: clamp(13px, 1.2vw, 15px);
+    transition: border-color 0.3s ease;
+    cursor: pointer;
+    min-width: 80px;
+}
+
+.controls-left select:focus {
+    outline: none;
+    border-color: #3b82f6;
 }
 
 .controls-right {
     display: flex;
-    gap: 10px;
+    gap: 12px;
     align-items: center;
 }
 
 .search-form {
     display: flex;
     gap: 10px;
+    align-items: center;
 }
 
 .search-form input {
-    padding: 10px 15px;
+    padding: clamp(8px, 1vw, 12px) clamp(12px, 1.5vw, 16px);
     border: 2px solid #e5e7eb;
     border-radius: 8px;
-    font-size: 14px;
-    min-width: 250px;
+    font-size: clamp(13px, 1.2vw, 15px);
+    width: 220px;
+    height: 40px;
+    box-sizing: border-box;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.search-form input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .btn-search, .btn-add {
-    padding: 10px 20px;
+    padding: clamp(8px, 1vw, 12px) clamp(16px, 2vw, 24px);
     border: none;
     border-radius: 8px;
-    font-size: 14px;
+    font-size: clamp(13px, 1.2vw, 15px);
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
+    white-space: nowrap;
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .btn-search {
@@ -175,13 +205,21 @@
 }
 
 .btn-edit, .btn-delete {
-    padding: 8px 14px;
+    padding: clamp(6px, 0.8vw, 10px) clamp(12px, 1.5vw, 16px);
     border: none;
     border-radius: 6px;
-    font-size: 13px;
+    font-size: clamp(12px, 1.1vw, 14px);
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
+    white-space: nowrap;
+    min-height: 36px;
+    min-width: 90px;
+    width: 90px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
 }
 
 .btn-edit {

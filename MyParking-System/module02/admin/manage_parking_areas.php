@@ -113,10 +113,10 @@ require_once __DIR__ . '/../../layout.php';
 renderHeader('Manage Parking Areas');
 ?>
 
-<link rel="stylesheet" href="<?php echo APP_BASE_PATH; ?>/module02/admin/manage_parking_areas.css">
+<link rel="stylesheet" href="<?php echo APP_BASE_PATH; ?>/module02/admin/manage_parking_areas.css?v=<?php echo time(); ?>">
 
 <div class="areas-container">
-    <h1 class="page-title">🏢 Parking Area Management</h1>
+    <h2>Parking Area Management</h2>
     
     <?php if ($message): ?>
     <div class="alert alert-<?php echo $messageType; ?>">
@@ -139,9 +139,9 @@ renderHeader('Manage Parking Areas');
             <form method="GET" class="search-form">
                 <input type="text" name="search" placeholder="Search by area name..." 
                        value="<?php echo htmlspecialchars($search); ?>">
-                <button type="submit" class="btn-search">🔍 Search</button>
+                <button type="submit" class="btn-search"><i class="fas fa-search"></i> Search</button>
             </form>
-            <button onclick="openCreateModal()" class="btn-add">➕ Add Area</button>
+            <button onclick="openCreateModal()" class="btn-add"><i class="fas fa-plus"></i> Add Area</button>
         </div>
     </div>
     
@@ -175,19 +175,19 @@ renderHeader('Manage Parking Areas');
                     <td><?php echo htmlspecialchars($area['parkingLot_type']); ?></td>
                     <td>
                         <span class="badge badge-<?php echo $area['is_booking_lot'] ? 'booking' : 'general'; ?>">
-                            <?php echo $area['is_booking_lot'] ? '📅 Bookable' : '🚗 General'; ?>
+                            <?php echo $area['is_booking_lot'] ? '<i class="fas fa-calendar-check"></i> Bookable' : '<i class="fas fa-car"></i> General'; ?>
                         </span>
                     </td>
                     <td><?php echo $area['capacity']; ?></td>
                     <td><?php echo $spaceCount; ?></td>
                     <td class="actions">
                         <button onclick='openEditModal(<?php echo json_encode($area); ?>)' 
-                                class="btn-edit">✏️ Edit</button>
+                                class="btn-edit"><i class="fas fa-edit"></i> Edit</button>
                         <form method="POST" style="display: inline;" 
                               onsubmit="return confirm('Delete this parking area? (Only if no spaces exist)')">
                             <input type="hidden" name="action" value="delete">
                             <input type="hidden" name="area_id" value="<?php echo $area['parkingLot_ID']; ?>">
-                            <button type="submit" class="btn-delete">🗑️ Delete</button>
+                            <button type="submit" class="btn-delete"><i class="fas fa-trash"></i> Delete</button>
                         </form>
                     </td>
                 </tr>
@@ -214,7 +214,7 @@ renderHeader('Manage Parking Areas');
 <div id="createModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h3>➕ Add New Parking Area</h3>
+            <h3><i class="fas fa-plus-circle"></i> Add New Parking Area</h3>
             <button onclick="closeModal('createModal')" class="close-btn">×</button>
         </div>
         <form method="POST">
@@ -261,7 +261,7 @@ renderHeader('Manage Parking Areas');
 <div id="editModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h3>✏️ Edit Parking Area</h3>
+            <h3><i class="fas fa-edit"></i> Edit Parking Area</h3>
             <button onclick="closeModal('editModal')" class="close-btn">×</button>
         </div>
         <form method="POST">

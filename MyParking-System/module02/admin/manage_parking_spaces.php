@@ -89,11 +89,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     
+    elseif ($action === 'confirm_booking') {
+        $bookingId = (int)($_POST['booking_id'] ?? 0);
+        
+        if ($bookingId) {
+            try {
+                $stmt = $db->prepare("UPDATE Booking SET booking_status='confirmed' WHERE booking_ID=? AND booking_status='pending'");
+                $stmt->execute([$bookingId]);
+                $message = "Booking confirmed successfully!";
+                $messageType = 'success';
+            } catch (PDOException $e) {
+                $message = "Error: " . $e->getMessage();
+                $messageType = 'error';
+            }
+        }
+    }
+    
     elseif ($action === 'delete') {
         $spaceId = (int)($_POST['space_id'] ?? 0);
         
         // Check if space has active bookings
-        $stmt = $db->prepare("SELECT COUNT(*) as cnt FROM Booking WHERE space_ID=? AND booking_end > NOW()");
+        $stmt = $db->prepare("SELECT COUNT(*) as cnt FROM Booking WHERE space_ID=? AND booking_date >= CURDATE() AND booking_status IN ('pending', 'confirmed', 'active')");
         $stmt->execute([$spaceId]);
         $count = $stmt->fetch()['cnt'];
         
@@ -145,18 +161,122 @@ $stmt = $db->prepare($sql);
 $stmt->execute($params);
 $spaces = $stmt->fetchAll();
 
+// Get ALL pending bookings (not filtered by search/area) for priority display
+$allPendingBookingsList = [];
+$sql = "SELECT b.*, ps.space_number, pl.parkingLot_name, 
+        u.username as student_name, v.vehicle_model as vehicle_model, v.license_plate
+        FROM Booking b
+        JOIN ParkingSpace ps ON b.space_ID = ps.space_ID
+        JOIN ParkingLot pl ON ps.parkingLot_ID = pl.parkingLot_ID
+        JOIN Vehicle v ON b.vehicle_ID = v.vehicle_ID
+        JOIN User u ON v.user_ID = u.user_ID
+        WHERE b.booking_status = 'pending'
+        AND b.booking_date >= CURDATE()
+        ORDER BY b.created_at ASC";
+$stmt = $db->prepare($sql);
+$stmt->execute();
+$allPendingBookingsList = $stmt->fetchAll();
+
+// Get pending bookings for spaces (for table display)
+$pendingBookings = [];
+if (!empty($spaces)) {
+    $spaceIds = array_column($spaces, 'space_ID');
+    $placeholders = implode(',', array_fill(0, count($spaceIds), '?'));
+    $sql = "SELECT b.*, ps.space_number, pl.parkingLot_name, 
+            u.username as student_name, v.vehicle_model as vehicle_model
+            FROM Booking b
+            JOIN ParkingSpace ps ON b.space_ID = ps.space_ID
+            JOIN ParkingLot pl ON ps.parkingLot_ID = pl.parkingLot_ID
+            JOIN Vehicle v ON b.vehicle_ID = v.vehicle_ID
+            JOIN User u ON v.user_ID = u.user_ID
+            WHERE b.space_ID IN ($placeholders) 
+            AND b.booking_status = 'pending'
+            AND b.booking_date >= CURDATE()
+            ORDER BY b.booking_date ASC";
+    $stmt = $db->prepare($sql);
+    $stmt->execute($spaceIds);
+    $pendingBookingsFiltered = $stmt->fetchAll();
+    
+    // Group by space_ID
+    foreach ($pendingBookingsFiltered as $booking) {
+        $pendingBookings[$booking['space_ID']][] = $booking;
+    }
+}
+
 require_once __DIR__ . '/../../layout.php';
 renderHeader('Manage Parking Spaces');
 ?>
 
-<link rel="stylesheet" href="<?php echo APP_BASE_PATH; ?>/module02/admin/manage_parking_spaces.css">
+<link rel="stylesheet" href="<?php echo APP_BASE_PATH; ?>/module02/admin/manage_parking_spaces.css?v=<?php echo time(); ?>">
 
 <div class="spaces-container">
-    <h1 class="page-title">🅿️ Parking Space Management</h1>
+    <h2>Parking Space Management</h2>
     
     <?php if ($message): ?>
     <div class="alert alert-<?php echo $messageType; ?>">
         <?php echo htmlspecialchars($message); ?>
+    </div>
+    <?php endif; ?>
+    
+    <!-- Pending Bookings Section -->
+    <?php if (!empty($allPendingBookingsList)): ?>
+    <div class="pending-bookings-section">
+        <div class="section-header">
+            <h3><i class="fas fa-clock"></i> Pending Booking Requests</h3>
+            <span class="badge-count"><?php echo count($allPendingBookingsList); ?> Waiting</span>
+        </div>
+        <div class="pending-bookings-grid">
+            <?php foreach ($allPendingBookingsList as $booking): ?>
+            <div class="pending-booking-card">
+                <div class="card-header">
+                    <div class="student-info">
+                        <i class="fas fa-user-circle"></i>
+                        <strong><?php echo htmlspecialchars($booking['student_name']); ?></strong>
+                    </div>
+                    <span class="pending-badge"><i class="fas fa-hourglass-half"></i> Pending</span>
+                </div>
+                <div class="card-body">
+                    <div class="info-row">
+                        <i class="fas fa-parking"></i>
+                        <span><strong>Space:</strong> <?php echo htmlspecialchars($booking['space_number']); ?></span>
+                    </div>
+                    <div class="info-row">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span><strong>Area:</strong> <?php echo htmlspecialchars($booking['parkingLot_name']); ?></span>
+                    </div>
+                    <div class="info-row">
+                        <i class="fas fa-calendar"></i>
+                        <span><strong>Date:</strong> <?php echo date('M d, Y', strtotime($booking['booking_date'])); ?></span>
+                    </div>
+                    <div class="info-row">
+                        <i class="fas fa-clock"></i>
+                        <span><strong>Time:</strong> 
+                        <?php 
+                        if ($booking['start_time'] === '00:00:00' && $booking['end_time'] === '23:59:59') {
+                            echo 'All Day';
+                        } else {
+                            echo date('g:i A', strtotime($booking['start_time'])) . ' - ' . date('g:i A', strtotime($booking['end_time']));
+                        }
+                        ?>
+                        </span>
+                    </div>
+                    <div class="info-row">
+                        <i class="fas fa-car"></i>
+                        <span><strong>Vehicle:</strong> <?php echo htmlspecialchars($booking['license_plate']); ?></span>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <form method="POST">
+                        <input type="hidden" name="action" value="confirm_booking">
+                        <input type="hidden" name="booking_id" value="<?php echo $booking['booking_ID']; ?>">
+                        <button type="submit" class="btn-confirm-large">
+                            <i class="fas fa-check-circle"></i> Confirm Booking
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
     </div>
     <?php endif; ?>
     
@@ -176,7 +296,7 @@ renderHeader('Manage Parking Spaces');
                 </select>
             </form>
             
-            <button onclick="openBatchModal()" class="btn-generate">⚡ Generate Spaces</button>
+            <button onclick="openBatchModal()" class="btn-generate"><i class="fas fa-bolt"></i> Generate Spaces</button>
         </div>
         
         <div class="controls-right">
@@ -186,9 +306,9 @@ renderHeader('Manage Parking Spaces');
                 <?php endif; ?>
                 <input type="text" name="search" placeholder="Search by space number..." 
                        value="<?php echo htmlspecialchars($search); ?>">
-                <button type="submit" class="btn-search">🔍 Search</button>
+                <button type="submit" class="btn-search"><i class="fas fa-search"></i> Search</button>
             </form>
-            <button onclick="openCreateModal()" class="btn-add">➕ Add Space</button>
+            <button onclick="openCreateModal()" class="btn-add"><i class="fas fa-plus"></i> Add Space</button>
         </div>
     </div>
     
@@ -201,6 +321,7 @@ renderHeader('Manage Parking Spaces');
                     <th>Space Number</th>
                     <th>Parking Area</th>
                     <th>QR Code Value</th>
+                    <th>Pending Bookings</th>
                     <th>Created</th>
                     <th>View QR</th>
                     <th>Actions</th>
@@ -208,7 +329,7 @@ renderHeader('Manage Parking Spaces');
             </thead>
             <tbody>
                 <?php if (empty($spaces)): ?>
-                <tr><td colspan="7" style="text-align: center; padding: 40px;">No parking spaces found</td></tr>
+                <tr><td colspan="8" style="text-align: center; padding: 40px;">No parking spaces found</td></tr>
                 <?php else: ?>
                 <?php foreach ($spaces as $index => $space): ?>
                 <tr>
@@ -216,19 +337,40 @@ renderHeader('Manage Parking Spaces');
                     <td class="space-number"><?php echo htmlspecialchars($space['space_number']); ?></td>
                     <td><?php echo htmlspecialchars($space['parkingLot_name']); ?></td>
                     <td class="qr-code"><?php echo htmlspecialchars($space['qr_code_value']); ?></td>
+                    <td>
+                        <?php if (isset($pendingBookings[$space['space_ID']])): ?>
+                            <div class="pending-bookings-cell">
+                                <?php foreach ($pendingBookings[$space['space_ID']] as $booking): ?>
+                                <div class="pending-booking-item">
+                                    <span class="booking-student"><i class="fas fa-user"></i> <?php echo htmlspecialchars($booking['student_name']); ?></span>
+                                    <span class="booking-date"><i class="fas fa-calendar"></i> <?php echo date('M d, Y', strtotime($booking['booking_date'])); ?></span>
+                                    <form method="POST" style="display: inline;">
+                                        <input type="hidden" name="action" value="confirm_booking">
+                                        <input type="hidden" name="booking_id" value="<?php echo $booking['booking_ID']; ?>">
+                                        <button type="submit" class="btn-confirm" title="Confirm Booking">
+                                            <i class="fas fa-check"></i> Confirm
+                                        </button>
+                                    </form>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php else: ?>
+                            <span style="color: #999;">No pending bookings</span>
+                        <?php endif; ?>
+                    </td>
                     <td><?php echo date('M d, Y', strtotime($space['created_at'])); ?></td>
                     <td>
                         <a href="<?php echo APP_BASE_PATH; ?>/module02/space_qr.php?space_id=<?php echo $space['space_ID']; ?>" 
-                           target="_blank" class="btn-qr">🔳 View QR</a>
+                           target="_blank" class="btn-qr"><i class="fas fa-qrcode"></i> View QR</a>
                     </td>
                     <td class="actions">
                         <button onclick='openEditModal(<?php echo json_encode($space); ?>)' 
-                                class="btn-edit">✏️ Edit</button>
+                                class="btn-edit"><i class="fas fa-edit"></i> Edit</button>
                         <form method="POST" style="display: inline;" 
                               onsubmit="return confirm('Delete this parking space?')">
                             <input type="hidden" name="action" value="delete">
                             <input type="hidden" name="space_id" value="<?php echo $space['space_ID']; ?>">
-                            <button type="submit" class="btn-delete">🗑️ Delete</button>
+                            <button type="submit" class="btn-delete"><i class="fas fa-trash"></i> Delete</button>
                         </form>
                     </td>
                 </tr>
@@ -243,7 +385,7 @@ renderHeader('Manage Parking Spaces');
 <div id="createModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h3>➕ Add New Parking Space</h3>
+            <h3><i class="fas fa-plus-circle"></i> Add New Parking Space</h3>
             <button onclick="closeModal('createModal')" class="close-btn">×</button>
         </div>
         <form method="POST">
@@ -278,7 +420,7 @@ renderHeader('Manage Parking Spaces');
 <div id="batchModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h3>⚡ Generate Multiple Spaces</h3>
+            <h3><i class="fas fa-bolt"></i> Generate Multiple Spaces</h3>
             <button onclick="closeModal('batchModal')" class="close-btn">×</button>
         </div>
         <form method="POST">
@@ -315,7 +457,7 @@ renderHeader('Manage Parking Spaces');
             </div>
             
             <div class="modal-actions">
-                <button type="submit" class="btn-primary">⚡ Generate</button>
+                <button type="submit" class="btn-primary"><i class="fas fa-bolt"></i> Generate</button>
                 <button type="button" onclick="closeModal('batchModal')" class="btn-secondary">Cancel</button>
             </div>
         </form>
@@ -326,7 +468,7 @@ renderHeader('Manage Parking Spaces');
 <div id="editModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h3>✏️ Edit Parking Space</h3>
+            <h3><i class="fas fa-edit"></i> Edit Parking Space</h3>
             <button onclick="closeModal('editModal')" class="close-btn">×</button>
         </div>
         <form method="POST">
