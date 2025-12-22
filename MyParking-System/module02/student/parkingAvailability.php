@@ -14,17 +14,30 @@ $db = getDB();
 
 // Get filters
 $selectedDate = $_GET['date'] ?? date('Y-m-d');
+$selectedType = $_GET['type'] ?? 'all'; // 'all', 'Staff', 'Student'
 $selectedArea = (int)($_GET['area_id'] ?? 0);
 
-// Get all areas for filter
-$areas = $db->query("SELECT * FROM ParkingLot ORDER BY parkingLot_name")->fetchAll();
+// Get all areas for filter (Staff and Student only)
+$areas = $db->query(
+    "SELECT parkingLot_ID, parkingLot_name, parkingLot_type 
+     FROM ParkingLot 
+     WHERE parkingLot_type IN ('Staff', 'Student')
+     ORDER BY parkingLot_type, parkingLot_name"
+)->fetchAll();
 
 // Get summary counts
 $whereClause = '';
 $params = [':date' => $selectedDate];
 
+// Apply type filter
+if ($selectedType !== 'all') {
+    $whereClause .= ' AND pl.parkingLot_type = :type';
+    $params[':type'] = $selectedType;
+}
+
+// Apply area filter
 if ($selectedArea) {
-    $whereClause = 'AND pl.parkingLot_ID = :area_id';
+    $whereClause .= ' AND pl.parkingLot_ID = :area_id';
     $params[':area_id'] = $selectedArea;
 }
 
@@ -55,9 +68,15 @@ $availableSpaces = $totalSpaces - $occupiedSpaces;
 
 // Chart data: Spaces used by area
 $chartParams = [':date' => $selectedDate];
-$chartWhere = '';
+$chartWhere = 'WHERE pa.parkingLot_type IN (\'Staff\', \'Student\')';
+
+if ($selectedType !== 'all') {
+    $chartWhere .= ' AND pa.parkingLot_type = :type';
+    $chartParams[':type'] = $selectedType;
+}
+
 if ($selectedArea) {
-    $chartWhere = 'WHERE pa.parkingLot_ID = :area_id';
+    $chartWhere .= ' AND pa.parkingLot_ID = :area_id';
     $chartParams[':area_id'] = $selectedArea;
 }
 
@@ -86,22 +105,32 @@ renderHeader('Parking Availability');
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <div class="availability-container">
-    <h1 class="page-title">📊 Daily Parking Availability</h1>
+    <h1 class="page-title"><i class="fas fa-chart-bar"></i> Daily Parking Availability</h1>
     
     <!-- Filters -->
     <div class="filters-bar">
-        <form method="GET" class="filter-form">
+        <form method="GET" class="filter-form" id="filterForm">
             <div class="filter-group">
                 <label>Date:</label>
                 <input type="date" name="date" value="<?php echo $selectedDate; ?>">
             </div>
             
             <div class="filter-group">
+                <label>Parking Type:</label>
+                <select name="type" id="typeSelect" onchange="filterAreaOptions()">
+                    <option value="all" <?php echo $selectedType === 'all' ? 'selected' : ''; ?>>All Types</option>
+                    <option value="Staff" <?php echo $selectedType === 'Staff' ? 'selected' : ''; ?>>Staff Parking (A)</option>
+                    <option value="Student" <?php echo $selectedType === 'Student' ? 'selected' : ''; ?>>Student Parking (B)</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
                 <label>Parking Area:</label>
-                <select name="area_id">
+                <select name="area_id" id="areaSelect">
                     <option value="">All Areas</option>
                     <?php foreach ($areas as $area): ?>
                     <option value="<?php echo $area['parkingLot_ID']; ?>" 
+                            data-type="<?php echo $area['parkingLot_type']; ?>"
                             <?php echo $selectedArea == $area['parkingLot_ID'] ? 'selected' : ''; ?>>
                         <?php echo htmlspecialchars($area['parkingLot_name']); ?>
                     </option>
@@ -109,14 +138,14 @@ renderHeader('Parking Availability');
                 </select>
             </div>
             
-            <button type="submit" class="btn-search">🔍 Search</button>
+            <button type="submit" class="btn-search"><i class="fas fa-search"></i> Search</button>
         </form>
     </div>
     
     <!-- Summary Cards -->
     <div class="summary-grid">
         <div class="summary-card">
-            <div class="card-icon">🅿️</div>
+            <div class="card-icon"><i class="fas fa-parking"></i></div>
             <div class="card-content">
                 <div class="card-label">Total Spaces</div>
                 <div class="card-value"><?php echo $totalSpaces; ?></div>
@@ -124,7 +153,7 @@ renderHeader('Parking Availability');
         </div>
         
         <div class="summary-card card-occupied">
-            <div class="card-icon">🚗</div>
+            <div class="card-icon"><i class="fas fa-car"></i></div>
             <div class="card-content">
                 <div class="card-label">Occupied Spaces</div>
                 <div class="card-value"><?php echo $occupiedSpaces; ?></div>
@@ -132,7 +161,7 @@ renderHeader('Parking Availability');
         </div>
         
         <div class="summary-card card-available">
-            <div class="card-icon">✅</div>
+            <div class="card-icon"><i class="fas fa-check-circle"></i></div>
             <div class="card-content">
                 <div class="card-label">Available Spaces</div>
                 <div class="card-value"><?php echo $availableSpaces; ?></div>
@@ -150,7 +179,7 @@ renderHeader('Parking Availability');
     
     <!-- Legend -->
     <div class="info-box">
-        <h4>ℹ️ Information</h4>
+        <h4><i class="fas fa-info-circle"></i> Information</h4>
         <p><strong>Date:</strong> <?php echo date('F d, Y', strtotime($selectedDate)); ?></p>
         <p><strong>Last Updated:</strong> <?php echo date('g:i A'); ?></p>
         <p>Real-time parking availability data. Refresh the page to see the latest information.</p>
@@ -158,6 +187,41 @@ renderHeader('Parking Availability');
 </div>
 
 <script>
+// Dynamic area dropdown filtering (without auto-submit)
+function filterAreaOptions() {
+    const typeSelect = document.getElementById('typeSelect');
+    const areaSelect = document.getElementById('areaSelect');
+    const selectedType = typeSelect.value;
+    
+    // Get all area options
+    const options = Array.from(areaSelect.options);
+    
+    // Show/hide options based on selected type
+    options.forEach(option => {
+        if (option.value === '') {
+            // Always show "All Areas" option
+            option.style.display = '';
+        } else {
+            const optionType = option.getAttribute('data-type');
+            if (selectedType === 'all' || selectedType === optionType) {
+                option.style.display = '';
+            } else {
+                option.style.display = 'none';
+                // Deselect hidden options
+                if (option.selected) {
+                    areaSelect.value = '';
+                }
+            }
+        }
+    });
+}
+
+// Initialize dropdown on page load (without submitting)
+window.addEventListener('DOMContentLoaded', function() {
+    filterAreaOptions();
+});
+
+// Chart
 const ctx = document.getElementById('occupancyChart').getContext('2d');
 new Chart(ctx, {
     type: 'bar',

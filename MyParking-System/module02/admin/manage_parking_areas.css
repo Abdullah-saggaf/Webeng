@@ -11,6 +11,13 @@
     font-weight: 700;
     color: #111827;
     margin-bottom: 25px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.page-title i {
+    color: #4f46e5;
 }
 
 /* Alert */
@@ -38,15 +45,21 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 25px;
+    margin-bottom: 20px;
     gap: 20px;
     flex-wrap: wrap;
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
+.controls-section,
 .controls-left {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
 .controls-left label {
@@ -55,59 +68,110 @@
 }
 
 .controls-left select {
-    padding: 8px 12px;
+    padding: 11px 15px;
     border: 2px solid #e5e7eb;
     border-radius: 8px;
     font-size: 14px;
+    height: 44px;
+    box-sizing: border-box;
+    background: white;
+    cursor: pointer;
+    transition: border-color 0.3s ease;
 }
 
+.controls-left select:hover {
+    border-color: #d1d5db;
+}
+
+.controls-left select:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.search-controls,
 .controls-right {
     display: flex;
-    gap: 10px;
-    align-items: center;
+    gap: 8px;
+    align-items: stretch;
 }
 
 .search-form {
     display: flex;
-    gap: 10px;
+    gap: 8px;
+    align-items: stretch;
 }
 
 .search-form input {
-    padding: 10px 15px;
+    padding: 11px 16px;
     border: 2px solid #e5e7eb;
     border-radius: 8px;
     font-size: 14px;
-    min-width: 250px;
+    min-width: 260px;
+    transition: all 0.3s ease;
+    height: 44px;
+    box-sizing: border-box;
+}
+
+.search-form input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .btn-search, .btn-add {
-    padding: 10px 20px;
+    padding: 0 22px;
     border: none;
     border-radius: 8px;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    white-space: nowrap;
+    height: 44px;
+    box-sizing: border-box;
+    min-width: 140px;
 }
 
 .btn-search {
     background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
     color: white;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
 }
 
 .btn-search:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(59, 130, 246, 0.4);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+}
+
+.btn-search:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
 }
 
 .btn-add {
     background: linear-gradient(135deg, #10b981 0%, #059669 100%);
     color: white;
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
 }
 
 .btn-add:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(16, 185, 129, 0.4);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+}
+
+.btn-add:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+}
+
+.btn-search i, .btn-add i {
+    font-size: 14px;
 }
 
 /* Table */
@@ -116,33 +180,63 @@
     border-radius: 15px;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
     overflow: hidden;
+    padding: 0;
+    margin: 0;
 }
 
 .areas-table {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 0;
+    padding: 0;
+    display: table;
 }
 
 .areas-table thead {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
+    display: table-header-group;
 }
 
 .areas-table th {
-    padding: 15px;
+    padding: 16px;
     text-align: left;
     font-weight: 700;
     font-size: 14px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    border: none;
+    margin: 0;
 }
 
 .areas-table td {
-    padding: 15px;
+    padding: 12px 16px;
     border-bottom: 1px solid #e5e7eb;
+    background: white;
+    vertical-align: middle;
+    height: 60px;
+    line-height: 1.5;
+}
+
+.areas-table tbody tr {
+    border-bottom: 1px solid #e5e7eb;
+    height: 60px;
+}
+
+.areas-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.areas-table tbody tr:last-child td {
+    border-bottom: none;
 }
 
 .areas-table tbody tr:hover {
+    background: #f9fafb;
+}
+
+.areas-table tbody tr:hover td {
     background: #f9fafb;
 }
 
@@ -172,36 +266,71 @@
 .actions {
     display: flex;
     gap: 8px;
+    align-items: center;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+}
+
+.actions form {
+    display: inline-flex;
+    margin: 0;
+}
+
+.areas-table td.actions {
+    vertical-align: middle;
+    min-width: 220px;
 }
 
 .btn-edit, .btn-delete {
-    padding: 8px 14px;
+    padding: 8px 12px;
     border: none;
     border-radius: 6px;
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
 }
 
 .btn-edit {
     background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
     color: white;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
 }
 
 .btn-edit:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 10px rgba(59, 130, 246, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+}
+
+.btn-edit:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+}
+
+.btn-edit i, .btn-delete i {
+    font-size: 13px;
 }
 
 .btn-delete {
     background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
     color: white;
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
 }
 
 .btn-delete:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 10px rgba(239, 68, 68, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+}
+
+.btn-delete:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
 }
 
 /* Pagination */

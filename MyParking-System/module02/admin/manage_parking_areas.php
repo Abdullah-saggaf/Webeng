@@ -116,7 +116,7 @@ renderHeader('Manage Parking Areas');
 <link rel="stylesheet" href="<?php echo APP_BASE_PATH; ?>/module02/admin/manage_parking_areas.css">
 
 <div class="areas-container">
-    <h1 class="page-title">🏢 Parking Area Management</h1>
+    <h1 class="page-title"><i class="fas fa-building"></i> Parking Area Management</h1>
     
     <?php if ($message): ?>
     <div class="alert alert-<?php echo $messageType; ?>">
@@ -126,7 +126,7 @@ renderHeader('Manage Parking Areas');
     
     <!-- Controls -->
     <div class="controls-bar">
-        <div class="controls-left">
+        <div class="controls-section">
             <label for="entries">Show entries:</label>
             <select id="entries" onchange="changeEntries(this.value)">
                 <option value="10" <?php echo $limit == 10 ? 'selected' : ''; ?>>10</option>
@@ -135,13 +135,15 @@ renderHeader('Manage Parking Areas');
             </select>
         </div>
         
-        <div class="controls-right">
-            <form method="GET" class="search-form">
-                <input type="text" name="search" placeholder="Search by area name..." 
-                       value="<?php echo htmlspecialchars($search); ?>">
-                <button type="submit" class="btn-search">🔍 Search</button>
-            </form>
-            <button onclick="openCreateModal()" class="btn-add">➕ Add Area</button>
+        <div class="controls-section">
+            <div class="search-controls">
+                <form method="GET" class="search-form">
+                    <input type="text" name="search" placeholder="Search by area name..." 
+                           value="<?php echo htmlspecialchars($search); ?>">
+                    <button type="submit" class="btn-search"><i class="fas fa-search"></i> Search</button>
+                </form>
+                <button onclick="openCreateModal()" class="btn-add"><i class="fas fa-plus"></i> Add Area</button>
+            </div>
         </div>
     </div>
     
@@ -182,12 +184,12 @@ renderHeader('Manage Parking Areas');
                     <td><?php echo $spaceCount; ?></td>
                     <td class="actions">
                         <button onclick='openEditModal(<?php echo json_encode($area); ?>)' 
-                                class="btn-edit">✏️ Edit</button>
+                                class="btn-edit"><i class="fas fa-edit"></i> Edit</button>
                         <form method="POST" style="display: inline;" 
-                              onsubmit="return confirm('Delete this parking area? (Only if no spaces exist)')">
+                              onsubmit="return confirm('Delete this parking area?')">
                             <input type="hidden" name="action" value="delete">
                             <input type="hidden" name="area_id" value="<?php echo $area['parkingLot_ID']; ?>">
-                            <button type="submit" class="btn-delete">🗑️ Delete</button>
+                            <button type="submit" class="btn-delete"><i class="fas fa-trash"></i> Delete</button>
                         </form>
                     </td>
                 </tr>
@@ -214,7 +216,7 @@ renderHeader('Manage Parking Areas');
 <div id="createModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h3>➕ Add New Parking Area</h3>
+            <h3><i class="fas fa-plus-circle"></i> Add New Parking Area</h3>
             <button onclick="closeModal('createModal')" class="close-btn">×</button>
         </div>
         <form method="POST">
@@ -250,7 +252,7 @@ renderHeader('Manage Parking Areas');
             </div>
             
             <div class="modal-actions">
-                <button type="submit" class="btn-primary">💾 Create</button>
+                <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Create</button>
                 <button type="button" onclick="closeModal('createModal')" class="btn-secondary">Cancel</button>
             </div>
         </form>
@@ -261,7 +263,7 @@ renderHeader('Manage Parking Areas');
 <div id="editModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h3>✏️ Edit Parking Area</h3>
+            <h3><i class="fas fa-edit"></i> Edit Parking Area</h3>
             <button onclick="closeModal('editModal')" class="close-btn">×</button>
         </div>
         <form method="POST">
@@ -297,7 +299,7 @@ renderHeader('Manage Parking Areas');
             </div>
             
             <div class="modal-actions">
-                <button type="submit" class="btn-primary">💾 Update</button>
+                <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Update</button>
                 <button type="button" onclick="closeModal('editModal')" class="btn-secondary">Cancel</button>
             </div>
         </form>

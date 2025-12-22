@@ -114,10 +114,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Get all areas for dropdown
-$areas = $db->query("SELECT * FROM ParkingLot ORDER BY parkingLot_name")->fetchAll();
+// Get all areas for dropdown (Staff and Student only)
+$areas = $db->query(
+    "SELECT parkingLot_ID, parkingLot_name, parkingLot_type 
+     FROM ParkingLot 
+     WHERE parkingLot_type IN ('Staff', 'Student')
+     ORDER BY parkingLot_type, parkingLot_name"
+)->fetchAll();
 
 // Filters
+$selectedType = $_GET['type'] ?? 'all'; // 'all', 'Staff', 'Student'
 $selectedArea = (int)($_GET['area_id'] ?? 0);
 $search = $_GET['search'] ?? '';
 
@@ -125,11 +131,19 @@ $search = $_GET['search'] ?? '';
 $whereClause = 'WHERE 1=1';
 $params = [];
 
+// Apply parking type filter
+if ($selectedType !== 'all') {
+    $whereClause .= ' AND pl.parkingLot_type=?';
+    $params[] = $selectedType;
+}
+
+// Apply parking area filter
 if ($selectedArea) {
     $whereClause .= ' AND ps.parkingLot_ID=?';
     $params[] = $selectedArea;
 }
 
+// Apply search filter
 if ($search) {
     $whereClause .= ' AND ps.space_number LIKE ?';
     $params[] = "%$search%";
@@ -152,7 +166,7 @@ renderHeader('Manage Parking Spaces');
 <link rel="stylesheet" href="<?php echo APP_BASE_PATH; ?>/module02/admin/manage_parking_spaces.css">
 
 <div class="spaces-container">
-    <h1 class="page-title">🅿️ Parking Space Management</h1>
+    <h1 class="page-title"><i class="fas fa-parking"></i> Parking Space Management</h1>
     
     <?php if ($message): ?>
     <div class="alert alert-<?php echo $messageType; ?>">
@@ -162,33 +176,50 @@ renderHeader('Manage Parking Spaces');
     
     <!-- Controls -->
     <div class="controls-bar">
-        <div class="controls-left">
-            <form method="GET" class="filter-form">
-                <label>Parking Area:</label>
-                <select name="area_id" onchange="this.form.submit()">
-                    <option value="">All Areas</option>
-                    <?php foreach ($areas as $area): ?>
-                    <option value="<?php echo $area['parkingLot_ID']; ?>" 
-                            <?php echo $selectedArea == $area['parkingLot_ID'] ? 'selected' : ''; ?>>
-                        <?php echo htmlspecialchars($area['parkingLot_name']); ?>
-                    </option>
-                    <?php endforeach; ?>
-                </select>
+        <div class="controls-section">
+            <form method="GET" class="filter-form" id="filterForm">
+                <div class="filter-group">
+                    <label>Parking Type:</label>
+                    <select name="type" id="typeSelect" onchange="updateAreaDropdown()">
+                        <option value="all" <?php echo $selectedType === 'all' ? 'selected' : ''; ?>>All Types</option>
+                        <option value="Staff" <?php echo $selectedType === 'Staff' ? 'selected' : ''; ?>>Staff Parking (A)</option>
+                        <option value="Student" <?php echo $selectedType === 'Student' ? 'selected' : ''; ?>>Student Parking (B)</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label>Parking Area:</label>
+                    <select name="area_id" id="areaSelect" onchange="this.form.submit()">
+                        <option value="">All Areas</option>
+                        <?php foreach ($areas as $area): ?>
+                        <option value="<?php echo $area['parkingLot_ID']; ?>" 
+                                data-type="<?php echo $area['parkingLot_type']; ?>"
+                                <?php echo $selectedArea == $area['parkingLot_ID'] ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($area['parkingLot_name']); ?>
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
             </form>
             
-            <button onclick="openBatchModal()" class="btn-generate">⚡ Generate Spaces</button>
+            <button onclick="openBatchModal()" class="btn-generate"><i class="fas fa-bolt"></i> Generate Spaces</button>
         </div>
         
-        <div class="controls-right">
-            <form method="GET" class="search-form">
-                <?php if ($selectedArea): ?>
-                <input type="hidden" name="area_id" value="<?php echo $selectedArea; ?>">
-                <?php endif; ?>
-                <input type="text" name="search" placeholder="Search by space number..." 
-                       value="<?php echo htmlspecialchars($search); ?>">
-                <button type="submit" class="btn-search">🔍 Search</button>
-            </form>
-            <button onclick="openCreateModal()" class="btn-add">➕ Add Space</button>
+        <div class="controls-section">
+            <div class="search-controls">
+                <form method="GET" class="search-form">
+                    <?php if ($selectedType !== 'all'): ?>
+                    <input type="hidden" name="type" value="<?php echo $selectedType; ?>">
+                    <?php endif; ?>
+                    <?php if ($selectedArea): ?>
+                    <input type="hidden" name="area_id" value="<?php echo $selectedArea; ?>">
+                    <?php endif; ?>
+                    <input type="text" name="search" placeholder="Search by space number..." 
+                           value="<?php echo htmlspecialchars($search); ?>">
+                    <button type="submit" class="btn-search"><i class="fas fa-search"></i> Search</button>
+                </form>
+                <button onclick="openCreateModal()" class="btn-add"><i class="fas fa-plus"></i> Add Space</button>
+            </div>
         </div>
     </div>
     
@@ -219,16 +250,16 @@ renderHeader('Manage Parking Spaces');
                     <td><?php echo date('M d, Y', strtotime($space['created_at'])); ?></td>
                     <td>
                         <a href="<?php echo APP_BASE_PATH; ?>/module02/space_qr.php?space_id=<?php echo $space['space_ID']; ?>" 
-                           target="_blank" class="btn-qr">🔳 View QR</a>
+                           target="_blank" class="btn-qr"><i class="fas fa-qrcode"></i> View QR</a>
                     </td>
                     <td class="actions">
                         <button onclick='openEditModal(<?php echo json_encode($space); ?>)' 
-                                class="btn-edit">✏️ Edit</button>
+                                class="btn-edit"><i class="fas fa-edit"></i> Edit</button>
                         <form method="POST" style="display: inline;" 
                               onsubmit="return confirm('Delete this parking space?')">
                             <input type="hidden" name="action" value="delete">
                             <input type="hidden" name="space_id" value="<?php echo $space['space_ID']; ?>">
-                            <button type="submit" class="btn-delete">🗑️ Delete</button>
+                            <button type="submit" class="btn-delete"><i class="fas fa-trash"></i> Delete</button>
                         </form>
                     </td>
                 </tr>
@@ -243,7 +274,7 @@ renderHeader('Manage Parking Spaces');
 <div id="createModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h3>➕ Add New Parking Space</h3>
+            <h3><i class="fas fa-plus-circle"></i> Add New Parking Space</h3>
             <button onclick="closeModal('createModal')" class="close-btn">×</button>
         </div>
         <form method="POST">
@@ -267,7 +298,7 @@ renderHeader('Manage Parking Spaces');
             </div>
             
             <div class="modal-actions">
-                <button type="submit" class="btn-primary">💾 Create</button>
+                <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Create</button>
                 <button type="button" onclick="closeModal('createModal')" class="btn-secondary">Cancel</button>
             </div>
         </form>
@@ -278,7 +309,7 @@ renderHeader('Manage Parking Spaces');
 <div id="batchModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h3>⚡ Generate Multiple Spaces</h3>
+            <h3><i class="fas fa-bolt"></i> Generate Multiple Spaces</h3>
             <button onclick="closeModal('batchModal')" class="close-btn">×</button>
         </div>
         <form method="POST">
@@ -315,7 +346,7 @@ renderHeader('Manage Parking Spaces');
             </div>
             
             <div class="modal-actions">
-                <button type="submit" class="btn-primary">⚡ Generate</button>
+                <button type="submit" class="btn-primary"><i class="fas fa-bolt"></i> Generate</button>
                 <button type="button" onclick="closeModal('batchModal')" class="btn-secondary">Cancel</button>
             </div>
         </form>
@@ -326,7 +357,7 @@ renderHeader('Manage Parking Spaces');
 <div id="editModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h3>✏️ Edit Parking Space</h3>
+            <h3><i class="fas fa-edit"></i> Edit Parking Space</h3>
             <button onclick="closeModal('editModal')" class="close-btn">×</button>
         </div>
         <form method="POST">
@@ -350,7 +381,7 @@ renderHeader('Manage Parking Spaces');
             </div>
             
             <div class="modal-actions">
-                <button type="submit" class="btn-primary">💾 Update</button>
+                <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Update</button>
                 <button type="button" onclick="closeModal('editModal')" class="btn-secondary">Cancel</button>
             </div>
         </form>
@@ -358,6 +389,46 @@ renderHeader('Manage Parking Spaces');
 </div>
 
 <script>
+function filterAreaOptions() {
+    const typeSelect = document.getElementById('typeSelect');
+    const areaSelect = document.getElementById('areaSelect');
+    const selectedType = typeSelect.value;
+    
+    // Get all area options
+    const options = Array.from(areaSelect.options);
+    
+    // Show/hide options based on selected type
+    options.forEach(option => {
+        if (option.value === '') {
+            // Always show "All Areas" option
+            option.style.display = '';
+        } else {
+            const optionType = option.getAttribute('data-type');
+            if (selectedType === 'all' || selectedType === optionType) {
+                option.style.display = '';
+            } else {
+                option.style.display = 'none';
+                // Deselect hidden options
+                if (option.selected) {
+                    areaSelect.value = '';
+                }
+            }
+        }
+    });
+}
+
+function updateAreaDropdown() {
+    // Filter the options
+    filterAreaOptions();
+    // Then submit the form
+    document.getElementById('filterForm').submit();
+}
+
+// Initialize dropdown on page load (without submitting)
+window.addEventListener('DOMContentLoaded', function() {
+    filterAreaOptions();
+});
+
 function openCreateModal() {
     document.getElementById('createModal').style.display = 'flex';
 }

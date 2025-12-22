@@ -11,6 +11,13 @@
     font-weight: 700;
     color: #111827;
     margin-bottom: 25px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.page-title i {
+    color: #4f46e5;
 }
 
 /* Filters Bar */
@@ -68,11 +75,19 @@
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
 }
 
 .btn-search:hover {
     transform: translateY(-2px);
     box-shadow: 0 5px 15px rgba(59, 130, 246, 0.4);
+}
+
+.btn-search i {
+    font-size: 14px;
 }
 
 /* Summary Cards */
