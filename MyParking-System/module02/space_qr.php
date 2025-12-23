@@ -20,47 +20,19 @@ function detectProjectBaseUrl(): string {
         strpos($host, '127.0.0.1:') === 0 || 
         strpos($host, '[::1]') === 0) {
         
-        // Try to get server's IP address
-        $serverIP = $_SERVER['SERVER_ADDR'] ?? null;
-        
-        // If SERVER_ADDR is localhost or IPv6, try to find actual network IP
-        if (!$serverIP || $serverIP === '127.0.0.1' || $serverIP === '::1') {
-            // Use a common local IP range - update this to your actual IP: 192.168.0.24
-            $serverIP = '192.168.0.24'; // CHANGE THIS TO YOUR COMPUTER'S IP
-        }
-        
-        // Preserve port if exists
-        $port = '';
-        if (strpos($host, ':') !== false) {
-            $parts = explode(':', $host);
-            if (isset($parts[1])) {
-                $port = ':' . $parts[1];
-            }
-        }
-        
-        $host = $serverIP . $port;
+        // Use actual IP address for QR codes
+        $serverIP = '10.66.93.44'; // Your computer's WiFi IP
+        $host = $serverIP; // Don't preserve port from localhost
     }
     
-    $doc = rtrim(str_replace('\\','/', $_SERVER['DOCUMENT_ROOT']), '/');
-
-    // candidate roots (try both)
-    $candidates = [
-        '/WebProject/MyParking-System',
-        '/MyParking-System'
-    ];
-
-    $root = null;
-    foreach ($candidates as $c) {
-        if (file_exists($doc . $c . '/module02/pageSpaceInfo.php')) {
-            $root = $c;
-            break;
-        }
-    }
-
-    // fallback: derive from script location (/.../module02)
-    if ($root === null) {
-        $scriptDir = rtrim(str_replace('\\','/', dirname($_SERVER['SCRIPT_NAME'])), '/'); // ex: /WebProject/MyParking-System/module02
-        $root = preg_replace('#/module02$#', '', $scriptDir);
+    // Since DocumentRoot might be set to Webeng folder, we need to check both scenarios
+    $scriptName = rtrim(str_replace('\\','/', dirname($_SERVER['SCRIPT_NAME'])), '/');
+    $root = preg_replace('#/module02$#', '', $scriptName);
+    
+    // If DocumentRoot is Webeng and script path is /MyParking-System/..., 
+    // we need to add /Webeng prefix for external URLs
+    if ($root === '/MyParking-System' || $root === '/WebProject/MyParking-System') {
+        $root = '/Webeng' . $root;
     }
 
     return $scheme . '://' . $host . $root;
@@ -94,7 +66,7 @@ if (!$space) {
 
 // Build verification URL using auto-detected base
 $base = detectProjectBaseUrl();
-$verification_url = $base . '/module02/pageSpaceInfo.php?space_id=' . $space_id;
+$verification_url = $base . '/module02/space_qr_view.php?space_id=' . $space_id;
 ?>
 <!DOCTYPE html>
 <html lang="en">

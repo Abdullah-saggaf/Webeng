@@ -82,7 +82,7 @@ foreach ($dailyData as $row) {
     $last7Days[$row['booking_date']] = $row['occupied'];
 }
 
-require_once __DIR__ . '/../../module01/layout.php';
+require_once __DIR__ . '/../../layout.php';
 renderHeader('Parking Dashboard');
 ?>
 

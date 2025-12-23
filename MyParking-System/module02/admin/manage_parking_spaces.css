@@ -184,6 +184,7 @@
 /* Controls Bar */
 .controls-bar {
     display: flex;
+    flex-wrap: nowrap;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 25px;
@@ -196,6 +197,7 @@
 
 .controls-left {
     display: flex;
+    flex-wrap: nowrap;
     align-items: center;
     gap: 12px;
 }
@@ -252,12 +254,14 @@
 
 .controls-right {
     display: flex;
+    flex-wrap: nowrap;
     gap: 12px;
     align-items: center;
 }
 
 .search-form {
     display: flex;
+    flex-wrap: nowrap;
     gap: 10px;
     align-items: center;
 }

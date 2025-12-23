@@ -46,6 +46,8 @@ try {
     }
     
     // Check current availability
+    $isLocked = !$space['is_booking_lot'];
+    
     $stmt = $db->prepare("
         SELECT b.booking_ID, b.booking_status, b.start_time, b.end_time, 
                u.username
@@ -61,7 +63,7 @@ try {
     $stmt->execute([$spaceId]);
     $currentBooking = $stmt->fetch(PDO::FETCH_ASSOC);
     
-    $isAvailable = !$currentBooking;
+    $isAvailable = !$currentBooking && !$isLocked;
     
 } catch (Exception $e) {
     die('
@@ -239,7 +241,9 @@ try {
             </div>
             
             <div class="status <?php echo $isAvailable ? 'available' : 'occupied'; ?>">
-                <?php if ($isAvailable): ?>
+                <?php if ($isLocked): ?>
+                    🔒 LOCKED - AREA CLOSED FOR EVENT
+                <?php elseif ($isAvailable): ?>
                     ✅ AVAILABLE
                 <?php else: ?>
                     🚫 OCCUPIED
@@ -247,7 +251,12 @@ try {
             </div>
             
             <div class="info-section">
-                <?php if (!$isAvailable && $currentBooking): ?>
+                <?php if ($isLocked): ?>
+                <div class="booking-alert">
+                    <div class="info-label">🔒 Area Locked</div>
+                    <div class="info-value">This parking area is temporarily closed for an event or maintenance.</div>
+                </div>
+                <?php elseif (!$isAvailable && $currentBooking): ?>
                 <div class="booking-alert">
                     <div class="info-label">⚠️ Current Booking</div>
                     <div class="info-value"><?php echo htmlspecialchars($currentBooking['username']); ?></div>

@@ -80,6 +80,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
+    
+    elseif ($action === 'toggle_lock') {
+        $id = (int)($_POST['area_id'] ?? 0);
+        $currentStatus = (int)($_POST['current_status'] ?? 0);
+        $newStatus = $currentStatus ? 0 : 1; // Toggle
+        
+        if ($id) {
+            try {
+                $stmt = $db->prepare("UPDATE ParkingLot SET is_booking_lot=? WHERE parkingLot_ID=?");
+                $stmt->execute([$newStatus, $id]);
+                $statusText = $newStatus ? "unlocked and available" : "locked for events";
+                $message = "Parking area $statusText successfully!";
+                $messageType = 'success';
+            } catch (PDOException $e) {
+                $message = "Error: " . $e->getMessage();
+                $messageType = 'error';
+            }
+        }
+    }
 }
 
 // Pagination & Search
@@ -174,13 +193,22 @@ renderHeader('Manage Parking Areas');
                     <td class="area-name"><?php echo htmlspecialchars($area['parkingLot_name']); ?></td>
                     <td><?php echo htmlspecialchars($area['parkingLot_type']); ?></td>
                     <td>
-                        <span class="badge badge-<?php echo $area['is_booking_lot'] ? 'booking' : 'general'; ?>">
-                            <?php echo $area['is_booking_lot'] ? '<i class="fas fa-calendar-check"></i> Bookable' : '<i class="fas fa-car"></i> General'; ?>
+                        <span class="badge badge-<?php echo $area['is_booking_lot'] ? 'booking' : 'locked'; ?>">
+                            <?php echo $area['is_booking_lot'] ? '<i class="fas fa-unlock"></i> Available' : '<i class="fas fa-lock"></i> Locked'; ?>
                         </span>
                     </td>
                     <td><?php echo $area['capacity']; ?></td>
                     <td><?php echo $spaceCount; ?></td>
                     <td class="actions">
+                        <form method="POST" style="display: inline;">
+                            <input type="hidden" name="action" value="toggle_lock">
+                            <input type="hidden" name="area_id" value="<?php echo $area['parkingLot_ID']; ?>">
+                            <input type="hidden" name="current_status" value="<?php echo $area['is_booking_lot']; ?>">
+                            <button type="submit" class="btn-lock <?php echo $area['is_booking_lot'] ? 'btn-do-lock' : 'btn-unlock'; ?>">
+                                <i class="fas fa-<?php echo $area['is_booking_lot'] ? 'lock' : 'unlock'; ?>"></i> 
+                                <?php echo $area['is_booking_lot'] ? 'Lock' : 'Unlock'; ?>
+                            </button>
+                        </form>
                         <button onclick='openEditModal(<?php echo json_encode($area); ?>)' 
                                 class="btn-edit"><i class="fas fa-edit"></i> Edit</button>
                         <form method="POST" style="display: inline;" 

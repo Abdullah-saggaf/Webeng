@@ -13,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
     $ticketId = $_POST['ticket_id'] ?? '';
     $newStatus = $_POST['new_status'] ?? '';
     
-    if (!empty($ticketId) && in_array($newStatus, ['Unpaid', 'Paid', 'Cancelled'])) {
+    if (!empty($ticketId) && in_array($newStatus, ['Unpaid', 'Paid'])) {
         if (updateTicketStatus($ticketId, $newStatus)) {
             $success_message = "Ticket status updated to $newStatus successfully.";
         } else {
@@ -21,6 +21,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
         }
     } else {
         $error_message = "Invalid ticket or status.";
+    }
+}
+
+// Handle delete
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_ticket'])) {
+    $ticketId = $_POST['ticket_id'] ?? '';
+    
+    if (!empty($ticketId)) {
+        try {
+            $db = getDB();
+            $stmt = $db->prepare("DELETE FROM Ticket WHERE ticket_ID = ?");
+            if ($stmt->execute([$ticketId])) {
+                $success_message = "Ticket deleted successfully.";
+            } else {
+                $error_message = "Failed to delete ticket.";
+            }
+        } catch (Exception $e) {
+            $error_message = "Error deleting ticket: " . $e->getMessage();
+        }
+    } else {
+        $error_message = "Invalid ticket ID.";
     }
 }
 
@@ -133,10 +154,15 @@ renderHeader('Traffic Summons');
                                     <select name="new_status" style="padding: 6px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px;">
                                         <option value="Unpaid" <?php echo $ticket['ticket_status'] === 'Unpaid' ? 'selected' : ''; ?>>Unpaid</option>
                                         <option value="Paid" <?php echo $ticket['ticket_status'] === 'Paid' ? 'selected' : ''; ?>>Paid</option>
-                                        <option value="Cancelled" <?php echo $ticket['ticket_status'] === 'Cancelled' ? 'selected' : ''; ?>>Cancelled</option>
                                     </select>
                                     <button type="submit" name="update_status" style="padding: 6px 12px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600;">
                                         Update
+                                    </button>
+                                </form>
+                                <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this ticket? This action cannot be undone.');">
+                                    <input type="hidden" name="ticket_id" value="<?php echo htmlspecialchars($ticket['ticket_ID']); ?>">
+                                    <button type="submit" name="delete_ticket" style="padding: 6px 12px; background: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 600; margin-left: 5px;">
+                                        <i class="fas fa-trash"></i> Delete
                                     </button>
                                 </form>
                             </td>

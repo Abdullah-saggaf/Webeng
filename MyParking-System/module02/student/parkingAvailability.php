@@ -40,7 +40,7 @@ $stmt = $db->prepare("
     SELECT COUNT(ps.space_ID) as total
     FROM ParkingSpace ps
     JOIN ParkingLot pl ON ps.parkingLot_ID = pl.parkingLot_ID
-    WHERE 1=1 $totalWhere
+    WHERE pl.is_booking_lot = 1 $totalWhere
 ");
 $stmt->execute($totalParams);
 $totalSpaces = $stmt->fetch()['total'];
@@ -53,6 +53,7 @@ $stmt = $db->prepare("
     JOIN Booking b ON ps.space_ID = b.space_ID
     WHERE b.booking_date = :date
       AND b.booking_status IN ('confirmed', 'active')
+      AND pl.is_booking_lot = 1
       $whereClause
 ");
 $stmt->execute($params);

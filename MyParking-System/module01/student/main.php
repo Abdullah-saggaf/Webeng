@@ -30,7 +30,16 @@ function uploadGrant($file, $userId) {
 
     $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
     $newName = 'grant_' . $userId . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $extension;
-    $targetDir = realpath(__DIR__ . '/../../storage/grants');
+    
+    // Create storage directory if it doesn't exist
+    $storageDir = __DIR__ . '/../../storage/grants';
+    if (!file_exists($storageDir)) {
+        if (!mkdir($storageDir, 0755, true)) {
+            throw new Exception('Unable to create storage directory.');
+        }
+    }
+    
+    $targetDir = realpath($storageDir);
     if ($targetDir === false) {
         throw new Exception('Storage path not found.');
     }

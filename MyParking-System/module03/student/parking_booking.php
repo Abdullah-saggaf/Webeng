@@ -196,9 +196,13 @@ renderHeader('Parking Booking');
                 <p><i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($space['parkingLot_name']); ?></p>
                 <p><i class="fas fa-tag"></i> <?php echo htmlspecialchars($space['parkingLot_type']); ?></p>
             </div>
-            <?php if ($space['status'] === 'Available'): ?>
+            <?php if ($space['status'] === 'Available' && $space['parkingLot_type'] === 'Student'): ?>
             <button class="btn-book" onclick="openBookingModal(<?php echo $space['space_ID']; ?>, '<?php echo htmlspecialchars($space['space_number']); ?>', '<?php echo htmlspecialchars($space['parkingLot_name']); ?>')">
                 <i class="fas fa-calendar-check"></i> Book Now
+            </button>
+            <?php elseif ($space['status'] === 'Available' && $space['parkingLot_type'] !== 'Student'): ?>
+            <button class="btn-restricted" disabled>
+                <i class="fas fa-ban"></i> Staff Only
             </button>
             <?php else: ?>
             <button class="btn-booked" disabled>

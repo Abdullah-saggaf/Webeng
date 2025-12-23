@@ -635,9 +635,18 @@ function renderHeader($title = 'MyParking') {
                 letter-spacing: 1px;
                 text-transform: uppercase;
                 position: relative;
-                display: inline-block;
+                display: inline-flex;
+                align-items: center;
+                gap: 12px;
                 padding: 10px 20px;
                 animation: logoGradientFlow 5s ease-in-out infinite;
+            }
+            
+            .system-logo img {
+                width: 40px;
+                height: 40px;
+                object-fit: contain;
+                filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
             }
             
             .system-logo::before {
@@ -724,12 +733,8 @@ function renderHeader($title = 'MyParking') {
                 left: 280px;
                 right: 0;
                 bottom: 0;
-                background-image: url('<?php echo APP_BASE_PATH . '/images/ump.png'; ?>');
-                background-size: 60%;
-                background-position: center;
-                background-repeat: no-repeat;
+                background: transparent;
                 z-index: -2;
-                filter: brightness(1.1) contrast(1.05);
             }
             
             .main-content::after {
@@ -1005,7 +1010,10 @@ function renderHeader($title = 'MyParking') {
                     <a href="<?php echo APP_BASE_PATH . '/module03/student/my_bookings.php'; ?>" class="<?php echo isActive('my_bookings.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-clipboard-list"></i> My Bookings
                     </a>
-                    <a href="#" class="<?php echo isActive('demerit-points.php', $currentPage, $currentPath); ?>">
+                    <a href="<?php echo APP_BASE_PATH . '/module04/student/my_summons.php'; ?>" class="<?php echo isActive('my_summons.php', $currentPage, $currentPath); ?>">
+                        <i class="fas fa-file-invoice"></i> My Summons
+                    </a>
+                    <a href="<?php echo APP_BASE_PATH . '/module04/student/demerit_points.php'; ?>" class="<?php echo isActive('demerit_points.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-exclamation-triangle"></i> Demerit Points
                     </a>
                     <a href="#" class="<?php echo isActive('profile.php', $currentPage, $currentPath); ?>">
@@ -1027,9 +1035,6 @@ function renderHeader($title = 'MyParking') {
                     <a href="<?php echo APP_BASE_PATH . '/module02/admin/manage_parking_spaces.php'; ?>" class="<?php echo isActive('manage_parking_spaces.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-th"></i> Parking Spaces
                     </a>
-                    <a href="#" class="<?php echo isActive('system-settings.php', $currentPage, $currentPath); ?>">
-                        <i class="fas fa-cog"></i> System Settings
-                    </a>
                 <?php elseif ($role === 'safety_staff'): ?>
                     <a href="<?php echo htmlspecialchars(APP_BASE_PATH . '/staff.php'); ?>" class="<?php echo isActive('staff.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-home"></i> Dashboard
@@ -1037,13 +1042,13 @@ function renderHeader($title = 'MyParking') {
                     <a href="<?php echo appUrl('/safety/vehicle-approvals.php'); ?>" class="<?php echo isActive('vehicle-approvals.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-check-circle"></i> Vehicle Approvals
                     </a>
-                    <a href="#" class="<?php echo isActive('traffic-summons.php', $currentPage, $currentPath); ?>">
-                        <i class="fas fa-exclamation-circle"></i> Traffic Summons
-                    </a>
-                    <a href="#" class="<?php echo isActive('safety-dashboard.php', $currentPage, $currentPath); ?>">
+                    <a href="<?php echo APP_BASE_PATH . '/module04/safety/safety_dashboard.php'; ?>" class="<?php echo isActive('safety_dashboard.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-shield-alt"></i> Safety Dashboard
                     </a>
-                    <a href="#" class="<?php echo isActive('issue-summon.php', $currentPage, $currentPath); ?>">
+                    <a href="<?php echo APP_BASE_PATH . '/module04/safety/traffic_summons.php'; ?>" class="<?php echo isActive('traffic_summons.php', $currentPage, $currentPath); ?>">
+                        <i class="fas fa-exclamation-circle"></i> Traffic Summons
+                    </a>
+                    <a href="<?php echo APP_BASE_PATH . '/module04/safety/issue_summon.php'; ?>" class="<?php echo isActive('issue_summon.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-edit"></i> Issue Summon
                     </a>
                     <a href="<?php echo appUrl('/safety/reports.php'); ?>" class="<?php echo isActive('reports.php', $currentPage, $currentPath); ?>">
@@ -1059,7 +1064,10 @@ function renderHeader($title = 'MyParking') {
         <!-- Top Header -->
         <div class="top-header">
             <div class="header-left">
-                <span class="system-logo">MY PARKING</span>
+                <span class="system-logo">
+                    <img src="<?php echo APP_BASE_PATH . '/images/ump.png'; ?>" alt="UMP Logo">
+                    MY PARKING
+                </span>
             </div>
             <div class="header-right">
                 <?php if (!empty($user['username'])): ?>

@@ -17,6 +17,39 @@ $stats = [
     'safety_staff' => count(array_filter($allUsers, fn($u) => $u['user_type'] === 'safety_staff'))
 ];
 
+// Get parking statistics
+$db = getDB();
+$stmt = $db->query("SELECT COUNT(*) as total FROM ParkingLot");
+$totalAreas = $stmt->fetch()['total'];
+
+$stmt = $db->query("SELECT COUNT(*) as total FROM ParkingSpace");
+$totalSpaces = $stmt->fetch()['total'];
+
+$stmt = $db->query("
+    SELECT COUNT(ps.space_ID) as total 
+    FROM ParkingSpace ps
+    JOIN ParkingLot pl ON ps.parkingLot_ID = pl.parkingLot_ID
+    WHERE pl.is_booking_lot = 1
+");
+$bookingSpaces = $stmt->fetch()['total'];
+
+$stmt = $db->query("
+    SELECT COUNT(ps.space_ID) as total 
+    FROM ParkingSpace ps
+    JOIN ParkingLot pl ON ps.parkingLot_ID = pl.parkingLot_ID
+    WHERE pl.is_booking_lot = 0
+");
+$lockedSpaces = $stmt->fetch()['total'];
+
+// Today's bookings
+$stmt = $db->query("
+    SELECT COUNT(DISTINCT space_ID) as occupied
+    FROM Booking
+    WHERE booking_date = CURDATE()
+      AND booking_status IN ('confirmed', 'active')
+");
+$todayOccupied = $stmt->fetch()['occupied'];
+
 renderHeader('Admin Dashboard');
 ?>
 
@@ -42,6 +75,43 @@ renderHeader('Admin Dashboard');
     <div class="card">
         <h3>Safety Staff</h3>
         <p style="font-size: 24px; font-weight: 700; color: #f59e0b;"><?php echo $stats['safety_staff']; ?></p>
+    </div>
+</div>
+
+<!-- Parking Statistics -->
+<div class="card" style="margin-top: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h2>🅿️ Parking Overview</h2>
+        <a href="<?php echo APP_BASE_PATH; ?>/module02/admin/parkingDashboard.php" class="btn">View Full Dashboard</a>
+    </div>
+    
+    <div class="grid" style="margin-top: 16px;">
+        <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+            <h3 style="color: white; opacity: 0.9;">Parking Areas</h3>
+            <p style="font-size: 28px; font-weight: 700;"><?php echo $totalAreas; ?></p>
+            <p style="font-size: 12px; opacity: 0.8; margin-top: 4px;">Total areas</p>
+        </div>
+        <div class="card" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;">
+            <h3 style="color: white; opacity: 0.9;">Total Spaces</h3>
+            <p style="font-size: 28px; font-weight: 700;"><?php echo $totalSpaces; ?></p>
+            <p style="font-size: 12px; opacity: 0.8; margin-top: 4px;">All parking spaces</p>
+        </div>
+        <div class="card" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white;">
+            <h3 style="color: white; opacity: 0.9;">Available Spaces</h3>
+            <p style="font-size: 28px; font-weight: 700;"><?php echo $bookingSpaces; ?></p>
+            <p style="font-size: 12px; opacity: 0.8; margin-top: 4px;">Unlocked for booking</p>
+        </div>
+        <div class="card" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white;">
+            <h3 style="color: white; opacity: 0.9;">Occupied Today</h3>
+            <p style="font-size: 28px; font-weight: 700;"><?php echo $todayOccupied; ?> / <?php echo $bookingSpaces; ?></p>
+            <p style="font-size: 12px; opacity: 0.8; margin-top: 4px;">Spaces booked</p>
+        </div>
+    </div>
+    
+    <div class="actions" style="margin-top: 20px;">
+        <a href="<?php echo APP_BASE_PATH; ?>/module02/admin/manage_parking_areas.php" class="btn">Manage Areas</a>
+        <a href="<?php echo APP_BASE_PATH; ?>/module02/admin/manage_parking_spaces.php" class="btn">Manage Spaces</a>
+        <a href="<?php echo APP_BASE_PATH; ?>/module02/admin/parkingDashboard.php" class="btn" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">View Analytics</a>
     </div>
 </div>
 
