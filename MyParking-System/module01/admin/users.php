@@ -168,14 +168,12 @@ renderHeader('Membership Management');
                                     </select>
                                     <label>Password (leave blank to keep)</label>
                                     <input type="password" name="password" placeholder="New password (optional)">
-                                    <div class="actions">
-                                        <button type="submit">Update</button>
-                                        <form method="POST" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>" class="inline" onsubmit="return confirm('Delete this user?');">
-                                            <input type="hidden" name="action" value="delete">
-                                            <input type="hidden" name="user_id" value="<?php echo htmlspecialchars($user['user_ID']); ?>">
-                                            <button type="submit" class="secondary">Delete</button>
-                                        </form>
-                                    </div>
+                                    <button type="submit">Update</button>
+                                </form>
+                                <form method="POST" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>" onsubmit="return confirm('Delete this user?');" style="margin-top: 10px;">
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="user_id" value="<?php echo htmlspecialchars($user['user_ID']); ?>">
+                                    <button type="submit" class="secondary">Delete</button>
                                 </form>
                             </details>
                         </td>
