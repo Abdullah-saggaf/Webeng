@@ -1,53 +1,92 @@
 <?php
 /**
  * Space QR Code Display
- * Public page - no login required
+ * Module 2 - MyParking System
+ * 
+ * PURPOSE: Generate and display QR code for a parking space
+ * QR code encodes URL to space_qr_view.php?space_id=X
+ * WORKFLOW: Admin prints this QR → Stick on physical parking space → Students scan to view space info
+ * PUBLIC PAGE: No login required (used for printing/display)
  */
 
+// Include database configuration
 require_once __DIR__ . '/../database/db_config.php';
 
 /**
  * Auto-detect the correct project base URL
- * For QR codes: ALWAYS use IP address, never localhost
+ * IMPORTANT: For QR codes, ALWAYS use IP address instead of localhost
+ * Reason: Mobile phones cannot access localhost URLs (they refer to the phone itself)
  */
 function detectProjectBaseUrl(): string {
+    // Determine HTTP or HTTPS
     $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
     $host   = $_SERVER['HTTP_HOST'];
     
-    // For QR codes: Replace localhost with actual IP address
+    // Replace localhost with actual network IP for mobile accessibility
     if ($host === 'localhost' || $host === '127.0.0.1' || 
         strpos($host, 'localhost:') === 0 || 
         strpos($host, '127.0.0.1:') === 0 || 
         strpos($host, '[::1]') === 0) {
         
-        // Use actual IP address for QR codes
-        $serverIP = '10.66.93.44'; // Your computer's WiFi IP
-        $host = $serverIP; // Don't preserve port from localhost
+        // Default to localhost if IP detection fails
+        $serverIP = '127.0.0.1';
+        
+        // Detect actual network IP (exclude VirtualBox adapters)
+        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            // On Windows, use ipconfig to find WiFi adapter IP
+            $ipconfig = shell_exec('ipconfig');
+            
+            // Look for valid IPv4 addresses (not localhost, not VirtualBox, not APIPA)
+            if (preg_match_all('/IPv4 Address[.\s]*:\s*([0-9.]+)/', $ipconfig, $matches)) {
+                foreach ($matches[1] as $ip) {
+                    // Skip: 127.0.0.1 (localhost), 192.168.56.x (VirtualBox), 169.254.x.x (APIPA)
+                    if ($ip !== '127.0.0.1' && 
+                        !preg_match('/^192\.168\.56\./', $ip) && 
+                        !preg_match('/^169\.254\./', $ip)) {
+                        $serverIP = $ip; // Use first valid IP found
+                        break;
+                    }
+                }
+            }
+        } else {
+            // On Linux/Mac, use hostname or gethostbyname
+            $serverIP = gethostbyname(gethostname());
+        }
+        
+        $host = $serverIP; // Replace localhost with detected IP
     }
     
-    // Since DocumentRoot might be set to Webeng folder, we need to check both scenarios
+    // Build base path (remove /module02 if present)
     $scriptName = rtrim(str_replace('\\','/', dirname($_SERVER['SCRIPT_NAME'])), '/');
     $root = preg_replace('#/module02$#', '', $scriptName);
     
-    // If DocumentRoot is Webeng and script path is /MyParking-System/..., 
-    // we need to add /Webeng prefix for external URLs
-    if ($root === '/MyParking-System' || $root === '/WebProject/MyParking-System') {
-        $root = '/Webeng' . $root;
-    }
+    // Remove /Webeng prefix if present
+    $root = preg_replace('#^/Webeng#', '', $root);
 
     return $scheme . '://' . $host . $root;
 }
 
+// Get base URL (with IP address for mobile scanning)
+$baseUrl = detectProjectBaseUrl();
+
+// Get space_id from URL parameter
 $space_id = (int)($_GET['space_id'] ?? 0);
 
+// VALIDATION: Ensure space_id is valid
 if ($space_id < 1) {
+    // Display error if invalid ID provided
     die('<div style="padding: 40px; text-align: center; font-family: Arial;">
         <h2 style="color: #ef4444;">❌ Invalid Space ID</h2>
         <p>Please provide a valid parking space ID.</p>
         </div>');
 }
 
+// Establish database connection
 $db = getDB();
+
+// Fetch parking space details
+// JOIN ParkingSpace with ParkingLot to get area information
+// FK: ps.parkingLot_ID → pl.parkingLot_ID
 $stmt = $db->prepare("
     SELECT ps.*, pl.parkingLot_name, pl.parkingLot_type 
     FROM ParkingSpace ps 
@@ -57,6 +96,7 @@ $stmt = $db->prepare("
 $stmt->execute([$space_id]);
 $space = $stmt->fetch();
 
+// If space not found, display error
 if (!$space) {
     die('<div style="padding: 40px; text-align: center; font-family: Arial;">
         <h2 style="color: #ef4444;">❌ Space Not Found</h2>
@@ -64,7 +104,8 @@ if (!$space) {
         </div>');
 }
 
-// Build verification URL using auto-detected base
+// Build verification URL: Points to space_qr_view.php with space_id parameter
+// This URL is encoded into the QR code
 $base = detectProjectBaseUrl();
 $verification_url = $base . '/module02/space_qr_view.php?space_id=' . $space_id;
 ?>
@@ -74,9 +115,9 @@ $verification_url = $base . '/module02/space_qr_view.php?space_id=' . $space_id;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QR Code - <?php echo htmlspecialchars($space['space_number']); ?></title>
-    <!-- Font Awesome -->
+    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <!-- QRCode.js library from CDN -->
+    <!-- QRCode.js library for client-side QR generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         * {
