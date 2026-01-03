@@ -2,53 +2,72 @@
 /**
  * Manage Parking Spaces - Admin View
  * Module 2 - MyParking System
+ * 
+ * PURPOSE: CRUD operations for parking spaces (ParkingSpace table)
+ * Admin can: Create single/batch spaces, Update, Delete, Confirm pending bookings, View QR codes
+ * Features: Filter by area, Search by space number, Generate QR codes for each space
+ * FK Relationships: ParkingSpace.parkingLot_ID → ParkingLot.parkingLot_ID
  */
 
+// Include authentication and database modules
 require_once __DIR__ . '/../../module01/auth.php';
 require_once __DIR__ . '/../../database/db_config.php';
 
-// Require FK Staff role (admin)
+// AUTHORIZATION: Only FK Staff (admin) can manage parking spaces
 requireRole(['fk_staff']);
 
+// Establish database connection
 $db = getDB();
+
+// Variables for feedback messages
 $message = '';
 $messageType = '';
 
-// Handle POST actions
+/* ==================== HANDLE POST ACTIONS (Form Submissions) ==================== */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     
+    /* ----- ACTION: Create Single Parking Space ----- */
     if ($action === 'create') {
-        $areaId = (int)($_POST['area_id'] ?? 0);
-        $spaceNumber = trim($_POST['space_number'] ?? '');
+        $areaId = (int)($_POST['area_id'] ?? 0); // FK to ParkingLot
+        $spaceNumber = trim($_POST['space_number'] ?? ''); // e.g., "A-001"
         
         if ($areaId && $spaceNumber) {
             try {
+                // Generate unique QR code value (format: SPACE_{areaID}_{spaceNumber}_{timestamp})
                 $qrCode = "SPACE_{$areaId}_{$spaceNumber}_" . time();
+                
+                // PREPARED STATEMENT: Insert new space with auto-generated QR code
                 $stmt = $db->prepare("INSERT INTO ParkingSpace (parkingLot_ID, space_number, qr_code_value) VALUES (?, ?, ?)");
                 $stmt->execute([$areaId, $spaceNumber, $qrCode]);
                 $message = "Parking space created successfully!";
                 $messageType = 'success';
             } catch (PDOException $e) {
+                // Catch duplicate space_number or FK constraint violations
                 $message = "Error: " . $e->getMessage();
                 $messageType = 'error';
             }
         }
     }
     
+    /* ----- ACTION: Batch Create Multiple Spaces ----- */
     elseif ($action === 'batch_create') {
         $areaId = (int)($_POST['area_id'] ?? 0);
-        $prefix = trim($_POST['prefix'] ?? 'A');
-        $startNum = (int)($_POST['start_number'] ?? 1);
-        $quantity = (int)($_POST['quantity'] ?? 1);
+        $prefix = trim($_POST['prefix'] ?? 'A'); // e.g., "A", "B", "C"
+        $startNum = (int)($_POST['start_number'] ?? 1); // Starting number (e.g., 1)
+        $quantity = (int)($_POST['quantity'] ?? 1); // How many spaces to create
         
+        // VALIDATION: Limit batch creation to 100 spaces max
         if ($areaId && $quantity > 0 && $quantity <= 100) {
             try {
+                // BEGIN TRANSACTION: Ensures all-or-nothing (rollback if any insert fails)
                 $db->beginTransaction();
                 $created = 0;
                 
+                // Loop to create multiple spaces (e.g., A-001, A-002, A-003...)
                 for ($i = 0; $i < $quantity; $i++) {
                     $num = $startNum + $i;
+                    // Format: Prefix-XXX (e.g., A-001, A-002)
                     $spaceNumber = $prefix . '-' . str_pad($num, 3, '0', STR_PAD_LEFT);
                     $qrCode = "SPACE_{$areaId}_{$spaceNumber}_" . time() . "_$i";
                     
@@ -57,10 +76,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $created++;
                 }
                 
+                // COMMIT TRANSACTION: All inserts successful
                 $db->commit();
                 $message = "Successfully created $created parking spaces!";
                 $messageType = 'success';
             } catch (PDOException $e) {
+                // ROLLBACK: If any error occurs, undo all inserts
                 $db->rollBack();
                 $message = "Error: " . $e->getMessage();
                 $messageType = 'error';
@@ -71,13 +92,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     
+    /* ----- ACTION: Update Existing Parking Space ----- */
     elseif ($action === 'update') {
-        $spaceId = (int)($_POST['space_id'] ?? 0);
+        $spaceId = (int)($_POST['space_id'] ?? 0); // PK: space_ID
         $spaceNumber = trim($_POST['space_number'] ?? '');
-        $areaId = (int)($_POST['area_id'] ?? 0);
+        $areaId = (int)($_POST['area_id'] ?? 0); // FK: parkingLot_ID
         
         if ($spaceId && $spaceNumber && $areaId) {
             try {
+                // Update space_number and can also reassign to different area (parkingLot_ID)
                 $stmt = $db->prepare("UPDATE ParkingSpace SET space_number=?, parkingLot_ID=? WHERE space_ID=?");
                 $stmt->execute([$spaceNumber, $areaId, $spaceId]);
                 $message = "Parking space updated successfully!";
@@ -89,11 +112,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     
+    /* ----- ACTION: Confirm Pending Booking ----- */
     elseif ($action === 'confirm_booking') {
         $bookingId = (int)($_POST['booking_id'] ?? 0);
         
         if ($bookingId) {
             try {
+                // Change booking_status from 'pending' to 'confirmed'
+                // Only affects bookings that are currently 'pending'
                 $stmt = $db->prepare("UPDATE Booking SET booking_status='confirmed' WHERE booking_ID=? AND booking_status='pending'");
                 $stmt->execute([$bookingId]);
                 $message = "Booking confirmed successfully!";
@@ -105,19 +131,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     
+    /* ----- ACTION: Delete Parking Space ----- */
     elseif ($action === 'delete') {
         $spaceId = (int)($_POST['space_id'] ?? 0);
         
-        // Check if space has active bookings
+        // BUSINESS RULE: Cannot delete space if it has active bookings
+        // Check for bookings with date >= today and status in ('pending', 'confirmed', 'active')
         $stmt = $db->prepare("SELECT COUNT(*) as cnt FROM Booking WHERE space_ID=? AND booking_date >= CURDATE() AND booking_status IN ('pending', 'confirmed', 'active')");
         $stmt->execute([$spaceId]);
         $count = $stmt->fetch()['cnt'];
         
         if ($count > 0) {
+            // Prevent deletion to maintain data integrity
             $message = "Cannot delete space with active bookings!";
             $messageType = 'error';
         } else {
             try {
+                // Safe to delete: No active bookings
                 $stmt = $db->prepare("DELETE FROM ParkingSpace WHERE space_ID=?");
                 $stmt->execute([$spaceId]);
                 $message = "Parking space deleted successfully!";
@@ -129,29 +159,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+/* ==================== END OF POST ACTIONS ==================== */
 
-// Get all areas for dropdown
+/* ==================== LOAD PARKING AREAS FOR DROPDOWN ==================== */
+// Get all parking areas to populate filter dropdown and form selects
 $areas = $db->query("SELECT * FROM ParkingLot ORDER BY parkingLot_name")->fetchAll();
 
-// Filters
-$selectedArea = (int)($_GET['area_id'] ?? 0);
-$search = $_GET['search'] ?? '';
+/* ==================== FILTERS ==================== */
+// Get filter parameters from URL
+$selectedArea = (int)($_GET['area_id'] ?? 0); // Filter by specific parking area
+$search = $_GET['search'] ?? ''; // Search by space number
 
-// Build query
-$whereClause = 'WHERE 1=1';
+// Build WHERE clause dynamically
+$whereClause = 'WHERE 1=1'; // Base condition (always true)
 $params = [];
 
 if ($selectedArea) {
+    // Filter: Show only spaces in selected area
     $whereClause .= ' AND ps.parkingLot_ID=?';
     $params[] = $selectedArea;
 }
 
 if ($search) {
+    // Search: Match space_number with LIKE (partial match)
     $whereClause .= ' AND ps.space_number LIKE ?';
     $params[] = "%$search%";
 }
 
-// Get spaces
+/* ==================== FETCH PARKING SPACES ==================== */
+// JOIN ParkingSpace with ParkingLot to show area name
+// FK: ps.parkingLot_ID → pl.parkingLot_ID
 $sql = "SELECT ps.*, pl.parkingLot_name 
         FROM ParkingSpace ps 
         JOIN ParkingLot pl ON ps.parkingLot_ID=pl.parkingLot_ID 
@@ -159,7 +196,7 @@ $sql = "SELECT ps.*, pl.parkingLot_name
         ORDER BY pl.parkingLot_name, ps.space_number";
 $stmt = $db->prepare($sql);
 $stmt->execute($params);
-$spaces = $stmt->fetchAll();
+$spaces = $stmt->fetchAll(); // Filtered spaces for table display
 
 // Get ALL pending bookings (not filtered by search/area) for priority display
 $allPendingBookingsList = [];
@@ -203,22 +240,27 @@ if (!empty($spaces)) {
     }
 }
 
+// Load main layout wrapper
 require_once __DIR__ . '/../../layout.php';
-renderHeader('Manage Parking Spaces');
+renderHeader('Manage Parking Spaces'); // Sets page title
 ?>
 
+<!-- Link to external CSS stylesheet -->
 <link rel="stylesheet" href="<?php echo APP_BASE_PATH; ?>/module02/admin/manage_parking_spaces.css?v=<?php echo time(); ?>">
 
+<!-- Main container -->
 <div class="spaces-container">
     <h2>Parking Space Management</h2>
     
+    <!-- Success/Error Message Alert -->
     <?php if ($message): ?>
     <div class="alert alert-<?php echo $messageType; ?>">
-        <?php echo htmlspecialchars($message); ?>
+        <?php echo htmlspecialchars($message); // Escape to prevent XSS ?>
     </div>
     <?php endif; ?>
     
-    <!-- Pending Bookings Section -->
+    <!-- ==================== PENDING BOOKINGS PRIORITY SECTION ==================== -->
+    <!-- Displays ALL pending bookings (unfiltered) for admin to approve quickly -->
     <?php if (!empty($allPendingBookingsList)): ?>
     <div class="pending-bookings-section">
         <div class="section-header">

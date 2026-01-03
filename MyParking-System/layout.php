@@ -1113,6 +1113,9 @@ function renderHeader($title = 'MyParking') {
                     <a href="<?php echo appUrl('/safety/vehicle-approvals.php'); ?>" class="<?php echo isActive('vehicle-approvals.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-check-circle"></i> Vehicle Approvals
                     </a>
+                    <a href="<?php echo APP_BASE_PATH . '/module02/admin/parkingDashboard.php'; ?>" class="<?php echo isActive('parkingDashboard.php', $currentPage, $currentPath); ?>">
+                        <i class="fas fa-chart-bar"></i> Parking Dashboard
+                    </a>
                     <a href="<?php echo APP_BASE_PATH . '/module04/safety/safety_dashboard.php'; ?>" class="<?php echo isActive('safety_dashboard.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-shield-alt"></i> Safety Dashboard
                     </a>
