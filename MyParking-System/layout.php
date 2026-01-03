@@ -227,6 +227,77 @@ function renderHeader($title = 'MyParking') {
                     padding: 8px 16px;
                 }
             }
+            
+            /* Message Boxes */
+            .msg {
+                padding: 15px 20px;
+                border-radius: 12px;
+                margin-bottom: 20px;
+                font-weight: 500;
+                font-size: 14px;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                animation: slideDown 0.3s ease-out;
+            }
+            
+            .msg.success {
+                background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+                color: #155724;
+                border: 1px solid #c3e6cb;
+            }
+            
+            .msg.error {
+                background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+                color: #721c24;
+                border: 1px solid #f5c6cb;
+            }
+            
+            @keyframes slideDown {
+                from {
+                    opacity: 0;
+                    transform: translateY(-10px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+            
+            /* Form Input Styling */
+            input[type="text"],
+            input[type="email"],
+            input[type="tel"],
+            input[type="password"],
+            select,
+            textarea {
+                width: 100%;
+                padding: 12px;
+                border: 2px solid #e5e7eb;
+                border-radius: 10px;
+                font-size: 14px;
+                font-family: 'Inter', 'Segoe UI', sans-serif;
+                transition: all 0.3s ease;
+                box-sizing: border-box;
+                margin-bottom: 15px;
+            }
+            
+            input:focus,
+            select:focus,
+            textarea:focus {
+                outline: none;
+                border-color: #667eea;
+                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            }
+            
+            label {
+                display: block;
+                margin-bottom: 8px;
+                font-weight: 600;
+                color: #374151;
+                font-size: 14px;
+            }
+            
             /* Professional Table Styling */
             table { 
                 width: 100%; 
@@ -1016,7 +1087,7 @@ function renderHeader($title = 'MyParking') {
                     <a href="<?php echo APP_BASE_PATH . '/module04/student/demerit_points.php'; ?>" class="<?php echo isActive('demerit_points.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-exclamation-triangle"></i> Demerit Points
                     </a>
-                    <a href="#" class="<?php echo isActive('profile.php', $currentPage, $currentPath); ?>">
+                    <a href="<?php echo APP_BASE_PATH . '/module01/student/profile.php'; ?>" class="<?php echo isActive('profile.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-user-circle"></i> Profile
                     </a>
                 <?php elseif ($role === 'fk_staff'): ?>
@@ -1054,7 +1125,7 @@ function renderHeader($title = 'MyParking') {
                     <a href="<?php echo appUrl('/safety/reports.php'); ?>" class="<?php echo isActive('reports.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-chart-line"></i> Reports
                     </a>
-                    <a href="#" class="<?php echo isActive('profile.php', $currentPage, $currentPath); ?>">
+                    <a href="<?php echo APP_BASE_PATH . '/module01/safety/profile.php'; ?>" class="<?php echo isActive('profile.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-user-circle"></i> Profile
                     </a>
                 <?php endif; ?>

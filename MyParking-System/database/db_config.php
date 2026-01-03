@@ -240,13 +240,12 @@ function getPendingVehicles(array $filters = []) {
     return $stmt->fetchAll();
 }
 
-function setVehicleStatus($vehicle_id, $status, $reason = null) {
+function setVehicleStatus($vehicle_id, $status) {
     $db = getDB();
-    $stmt = $db->prepare("UPDATE Vehicle SET grant_status = :status, rejection_reason = :reason WHERE vehicle_ID = :vehicle_id");
+    $stmt = $db->prepare("UPDATE Vehicle SET grant_status = :status WHERE vehicle_ID = :vehicle_id");
     return $stmt->execute([
         ':vehicle_id' => $vehicle_id,
-        ':status' => $status,
-        ':reason' => $reason
+        ':status' => $status
     ]);
 }
 
