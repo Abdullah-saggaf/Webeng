@@ -23,8 +23,8 @@ $db = getDB();
 $selectedDate = $_GET['date'] ?? date('Y-m-d'); // Default to today
 $selectedArea = (int)($_GET['area_id'] ?? 0); // 0 = All areas
 
-// Get all parking areas for filter dropdown
-$areas = $db->query("SELECT * FROM ParkingLot ORDER BY parkingLot_name")->fetchAll();
+// Get all parking areas for filter dropdown (only Student parking areas)
+$areas = $db->query("SELECT * FROM ParkingLot WHERE parkingLot_type = 'Student' ORDER BY parkingLot_name")->fetchAll();
 
 /* ==================== SUMMARY COUNTS ==================== */
 // Build WHERE clause for filtering
@@ -45,13 +45,15 @@ if ($selectedArea) {
     $totalParams[':area_id'] = $selectedArea;
 }
 
-// Count total spaces in booking areas
+// Count total spaces in booking areas (only Student parking areas)
 // FK: ps.parkingLot_ID → pl.parkingLot_ID
 $stmt = $db->prepare("
     SELECT COUNT(ps.space_ID) as total
     FROM ParkingSpace ps
     JOIN ParkingLot pl ON ps.parkingLot_ID = pl.parkingLot_ID
-    WHERE pl.is_booking_lot = 1 $totalWhere
+    WHERE pl.is_booking_lot = 1 
+      AND pl.parkingLot_type = 'Student'
+      $totalWhere
 ");
 $stmt->execute($totalParams);
 $totalSpaces = $stmt->fetch()['total'];
@@ -66,6 +68,7 @@ $stmt = $db->prepare("
     WHERE b.booking_date = :date
       AND b.booking_status IN ('confirmed', 'active')
       AND pl.is_booking_lot = 1
+      AND pl.parkingLot_type = 'Student'
       $whereClause
 ");
 $stmt->execute($params);
@@ -83,7 +86,7 @@ if ($selectedArea) {
     $chartParams[':area_id'] = $selectedArea;
 }
 
-// Query: For each area, count total spaces and occupied spaces
+// Query: For each area, count total spaces and occupied spaces (only Student parking areas)
 // LEFT JOIN ensures areas with no bookings still appear (occupied_count = 0)
 $stmt = $db->prepare("
     SELECT 
@@ -95,6 +98,7 @@ $stmt = $db->prepare("
     LEFT JOIN Booking b ON ps.space_ID = b.space_ID 
         AND b.booking_date = :date
         AND b.booking_status IN ('confirmed', 'active')
+    WHERE pa.parkingLot_type = 'Student'
     $chartWhere
     GROUP BY pa.parkingLot_ID, pa.parkingLot_name
     ORDER BY pa.parkingLot_name
@@ -146,7 +150,8 @@ renderHeader('Parking Availability');
     
     <!-- ==================== SUMMARY CARDS ==================== -->
     <!-- Display 3 key metrics: Total, Occupied, Available spaces -->
-    <div class="summary-grid">\n        <!-- Card 1: Total Spaces -->
+    <div class="summary-grid">
+        <!-- Card 1: Total Spaces -->
         <div class="summary-card">
             <div class="card-icon"><i class="fas fa-parking"></i></div>
             <div class="card-content">
@@ -185,7 +190,8 @@ renderHeader('Parking Availability');
     </div>
     
     <!-- ==================== INFO BOX ==================== -->
-    <!-- Additional information about the data -->\n    <div class="info-box">
+    <!-- Additional information about the data -->
+    <div class="info-box">
         <h4><i class="fas fa-info-circle"></i> Information</h4>
         <p><strong>Date:</strong> <?php echo date('F d, Y', strtotime($selectedDate)); ?></p>
         <p><strong>Last Updated:</strong> <?php echo date('g:i A'); ?></p>
