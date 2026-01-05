@@ -19,6 +19,24 @@ $db = getDB();
 $message = '';
 $messageType = '';
 
+// Auto-complete expired active bookings - DISABLED (columns not in current database schema)
+/*
+$currentTime = date('Y-m-d H:i:s');
+$completeStmt = $db->prepare("
+    UPDATE Booking 
+    SET booking_status = 'completed'
+    WHERE booking_status = 'active' 
+    AND actual_end_time IS NOT NULL 
+    AND actual_end_time < ?
+");
+$completedCount = $completeStmt->execute([$currentTime]) ? $completeStmt->rowCount() : 0;
+
+if ($completedCount > 0) {
+    $message = "$completedCount parking session(s) automatically completed.";
+    $messageType = 'success';
+}
+*/
+
 // Handle actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -113,12 +131,14 @@ renderHeader('View & Manage Bookings');
     display: flex;
     gap: 15px;
     flex-wrap: wrap;
-    align-items: end;
+    align-items: flex-end;
 }
 
 .filter-group {
     flex: 1;
     min-width: 200px;
+    display: flex;
+    flex-direction: column;
 }
 
 .filter-group label {
@@ -127,6 +147,7 @@ renderHeader('View & Manage Bookings');
     font-size: 13px;
     font-weight: 500;
     color: #374151;
+    min-height: 18px;
 }
 
 .filter-group input,
@@ -360,11 +381,6 @@ renderHeader('View & Manage Bookings');
                 <input type="text" id="filter-student" placeholder="e.g., S001" 
                        value="<?php echo htmlspecialchars($filterStudent); ?>" onchange="applyFilters()">
             </div>
-            
-            <div class="filter-group">
-                <label>&nbsp;</label>
-                <button onclick="clearFilters()" class="btn-action btn-update">Clear Filters</button>
-            </div>
         </div>
         
         <!-- Bookings Table -->
@@ -418,8 +434,7 @@ renderHeader('View & Manage Bookings');
                             u.username,
                             v.license_plate as booked_plate,
                             v.vehicle_model,
-                            v.vehicle_type,
-                            b.actual_plate_number
+                            v.vehicle_type
                         FROM Booking b
                         JOIN ParkingSpace ps ON b.space_ID = ps.space_ID
                         JOIN ParkingLot pl ON ps.parkingLot_ID = pl.parkingLot_ID
@@ -466,7 +481,7 @@ renderHeader('View & Manage Bookings');
                             <div><?php echo htmlspecialchars($booking['vehicle_model']); ?></div>
                             <div style="font-size: 11px; color: #6b7280;">
                                 <?php 
-                                echo htmlspecialchars($booking['actual_plate_number'] ?: $booking['booked_plate']); 
+                                echo htmlspecialchars($booking['booked_plate']); 
                                 ?>
                             </div>
                         </td>
@@ -480,7 +495,16 @@ renderHeader('View & Manage Bookings');
                                     class="btn-action btn-view">
                                 <i class="fas fa-eye"></i> View
                             </button>
-                            <?php if ($booking['booking_status'] !== 'completed' && $booking['booking_status'] !== 'cancelled'): ?>
+                            <?php if ($booking['booking_status'] === 'completed'): ?>
+                            <form method="POST" style="display: inline;" 
+                                  onsubmit="return confirm('Delete this completed booking?')">
+                                <input type="hidden" name="action" value="cancel_booking">
+                                <input type="hidden" name="booking_id" value="<?php echo $booking['booking_ID']; ?>">
+                                <button type="submit" class="btn-action btn-cancel">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </form>
+                            <?php elseif ($booking['booking_status'] !== 'cancelled'): ?>
                             <form method="POST" style="display: inline;" 
                                   onsubmit="return confirm('Cancel this booking?')">
                                 <input type="hidden" name="action" value="cancel_booking">
@@ -608,8 +632,8 @@ renderHeader('View & Manage Bookings');
                                 b.start_time,
                                 b.end_time,
                                 b.booking_status,
-                                b.session_started_at,
-                                b.session_ended_at
+                                b.actual_start_time,
+                                b.actual_end_time
                             FROM Booking b
                             JOIN Vehicle v ON b.vehicle_ID = v.vehicle_ID
                             JOIN User u ON v.user_ID = u.user_ID
@@ -624,9 +648,9 @@ renderHeader('View & Manage Bookings');
                         
                         foreach ($history as $record):
                             $duration = '';
-                            if ($record['session_started_at'] && $record['session_ended_at']) {
-                                $start = new DateTime($record['session_started_at']);
-                                $end = new DateTime($record['session_ended_at']);
+                            if ($record['actual_start_time'] && $record['actual_end_time']) {
+                                $start = new DateTime($record['actual_start_time']);
+                                $end = new DateTime($record['actual_end_time']);
                                 $diff = $start->diff($end);
                                 $duration = $diff->format('%hh %im');
                             }
@@ -673,7 +697,7 @@ renderHeader('View & Manage Bookings');
                     u.user_ID,
                     ps.space_number,
                     pl.parkingLot_name,
-                    b.actual_plate_number,
+                    v.license_plate,
                     v.vehicle_type,
                     v.vehicle_model
                 FROM Booking b
@@ -722,7 +746,7 @@ renderHeader('View & Manage Bookings');
                     
                     <div class="session-detail">
                         <span class="session-label">Vehicle</span>
-                        <span class="session-value"><?php echo htmlspecialchars($session['actual_plate_number']); ?></span>
+                        <span class="session-value"><?php echo htmlspecialchars($session['license_plate']); ?></span>
                     </div>
                     
                     <div class="session-detail">
@@ -810,10 +834,6 @@ function applyFilters() {
     window.location.href = '?' + params.toString();
 }
 
-function clearFilters() {
-    window.location.href = '?tab=manage';
-}
-
 function viewBookingDetails(booking) {
     const modal = document.getElementById('detailsModal');
     const body = document.getElementById('modalBody');
@@ -845,11 +865,11 @@ function viewBookingDetails(booking) {
             <div><strong>Area:</strong> ${booking.parkingLot_name}</div>
             <div><strong>Date:</strong> ${booking.booking_date}</div>
             <div><strong>Reserved Time:</strong> ${booking.start_time} - ${booking.end_time}</div>
-            <div><strong>Vehicle Plate:</strong> ${booking.actual_plate_number || booking.booked_plate}</div>
+            <div><strong>Vehicle Plate:</strong> ${booking.booked_plate}</div>
             <div><strong>Status:</strong> <span class="status-badge status-${booking.booking_status}">${booking.booking_status.toUpperCase()}</span></div>
-            ${booking.session_started_at ? `<div><strong>Session Started:</strong> ${booking.session_started_at}</div>` : ''}
+            ${booking.actual_start_time ? `<div><strong>Session Start Time:</strong> ${new Date(booking.actual_start_time).toLocaleString('en-MY', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</div>` : ''}
             ${booking.actual_start_time && booking.actual_end_time ? `<div><strong>Session Duration:</strong> ${sessionDuration}</div>` : ''}
-            ${booking.session_ended_at ? `<div><strong>Session Ended:</strong> ${booking.session_ended_at}</div>` : ''}
+            ${booking.actual_end_time ? `<div><strong>Session End Time:</strong> ${new Date(booking.actual_end_time).toLocaleString('en-MY', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</div>` : ''}
         </div>
     `;
     

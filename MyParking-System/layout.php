@@ -54,6 +54,7 @@ function renderHeader($title = 'MyParking') {
         <title><?php echo htmlspecialchars($title); ?></title>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
         <link rel="stylesheet" href="<?php echo APP_BASE_PATH . '/fonts/style.css'; ?>">
+        <link rel="stylesheet" href="<?php echo APP_BASE_PATH . '/module01/module01.css'; ?>">
         <style>
             /* Clean Body */
             body { 
@@ -1069,7 +1070,7 @@ function renderHeader($title = 'MyParking') {
                     <a href="<?php echo htmlspecialchars(APP_BASE_PATH . '/user.php'); ?>" class="<?php echo isActive('user.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-home"></i> Dashboard
                     </a>
-                    <a href="<?php echo appUrl('/student/main.php'); ?>" class="<?php echo isActive('main.php', $currentPage, $currentPath); ?>">
+                    <a href="<?php echo appUrl('/student/vehicles.php'); ?>" class="<?php echo isActive('vehicles.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-car"></i> Vehicles
                     </a>
                     <a href="<?php echo APP_BASE_PATH . '/module03/student/parking_booking.php'; ?>" class="<?php echo isActive('parking_booking.php', $currentPage, $currentPath); ?>">
@@ -1087,18 +1088,12 @@ function renderHeader($title = 'MyParking') {
                     <a href="<?php echo APP_BASE_PATH . '/module04/student/demerit_points.php'; ?>" class="<?php echo isActive('demerit_points.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-exclamation-triangle"></i> Demerit Points
                     </a>
-                    <a href="<?php echo APP_BASE_PATH . '/module01/student/profile.php'; ?>" class="<?php echo isActive('profile.php', $currentPage, $currentPath); ?>">
-                        <i class="fas fa-user-circle"></i> Profile
-                    </a>
                 <?php elseif ($role === 'fk_staff'): ?>
                     <a href="<?php echo htmlspecialchars(APP_BASE_PATH . '/admin.php'); ?>" class="<?php echo isActive('admin.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-home"></i> Dashboard
                     </a>
                     <a href="<?php echo appUrl('/admin/users.php'); ?>" class="<?php echo isActive('users.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-users-cog"></i> Manage Users
-                    </a>
-                    <a href="<?php echo appUrl('/admin/reports.php'); ?>" class="<?php echo isActive('reports.php', $currentPage, $currentPath); ?>">
-                        <i class="fas fa-chart-bar"></i> Reports
                     </a>
                     <a href="<?php echo APP_BASE_PATH . '/module02/admin/manage_parking_areas.php'; ?>" class="<?php echo isActive('manage_parking_areas.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-map-marked-alt"></i> Parking Areas
@@ -1128,12 +1123,6 @@ function renderHeader($title = 'MyParking') {
                     <a href="<?php echo APP_BASE_PATH . '/module04/safety/issue_summon.php'; ?>" class="<?php echo isActive('issue_summon.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-edit"></i> Issue Summon
                     </a>
-                    <a href="<?php echo appUrl('/safety/reports.php'); ?>" class="<?php echo isActive('reports.php', $currentPage, $currentPath); ?>">
-                        <i class="fas fa-chart-line"></i> Reports
-                    </a>
-                    <a href="<?php echo APP_BASE_PATH . '/module01/safety/profile.php'; ?>" class="<?php echo isActive('profile.php', $currentPage, $currentPath); ?>">
-                        <i class="fas fa-user-circle"></i> Profile
-                    </a>
                 <?php endif; ?>
             </nav>
         </div>
@@ -1148,17 +1137,60 @@ function renderHeader($title = 'MyParking') {
             </div>
             <div class="header-right">
                 <?php if (!empty($user['username'])): ?>
-                    <span class="user-greeting">Hi, <?php echo htmlspecialchars($user['username']); ?></span>
-                    <form class="inline" action="<?php echo appUrl('/login.php'); ?>" method="POST" style="display:inline;">
-                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf); ?>">
-                        <input type="hidden" name="logout" value="1">
-                        <button type="submit" class="header-logout-btn">Logout</button>
-                    </form>
+                    <div class="user-dropdown">
+                        <button class="dropdown-toggle" type="button" id="userDropdownBtn">
+                            <i class="fas fa-user-circle"></i>
+                            <span><?php echo htmlspecialchars($user['username']); ?></span>
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <div class="dropdown-menu" id="userDropdownMenu">
+                            <?php
+                            // Determine profile URL based on role
+                            $profileUrl = APP_BASE_PATH . '/module01/student/profile.php';
+                            if ($role === 'fk_staff') {
+                                $profileUrl = APP_BASE_PATH . '/module01/admin/profile.php';
+                            } elseif ($role === 'safety_staff') {
+                                $profileUrl = APP_BASE_PATH . '/module01/safety/profile.php';
+                            }
+                            ?>
+                            <a href="<?php echo htmlspecialchars($profileUrl); ?>" class="dropdown-item">
+                                <i class="fas fa-user"></i> My Profile
+                            </a>
+                            <div class="dropdown-divider"></div>
+                            <form action="<?php echo appUrl('/login.php'); ?>" method="POST" style="margin: 0;">
+                                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf); ?>">
+                                <input type="hidden" name="logout" value="1">
+                                <button type="submit" class="dropdown-item logout-item">
+                                    <i class="fas fa-sign-out-alt"></i> Logout
+                                </button>
+                            </form>
+                        </div>
+                    </div>
                 <?php endif; ?>
             </div>
         </div>
         
         <script>
+            // User dropdown toggle
+            document.addEventListener('DOMContentLoaded', function() {
+                const dropdownBtn = document.getElementById('userDropdownBtn');
+                const dropdownMenu = document.getElementById('userDropdownMenu');
+                
+                if (dropdownBtn && dropdownMenu) {
+                    dropdownBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        dropdownMenu.classList.toggle('show');
+                    });
+                    
+                    // Close dropdown when clicking outside
+                    document.addEventListener('click', function(e) {
+                        if (!dropdownBtn.contains(e.target) && !dropdownMenu.contains(e.target)) {
+                            dropdownMenu.classList.remove('show');
+                        }
+                    });
+                }
+            });
+            
             function toggleSidebarDropdown(event) {
                 event.stopPropagation();
                 const dropdown = event.target.nextElementSibling;

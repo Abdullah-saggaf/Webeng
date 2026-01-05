@@ -64,12 +64,15 @@ h2 {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    flex: 1;
+    min-width: 180px;
 }
 
 .filter-group label {
     font-weight: 600;
     color: #374151;
     font-size: clamp(13px, 1.2vw, 15px);
+    min-height: 20px;
 }
 
 .filter-group input,
@@ -79,7 +82,7 @@ h2 {
     border-radius: 8px;
     font-size: clamp(13px, 1.2vw, 15px);
     transition: border-color 0.3s ease;
-    min-width: 180px;
+    width: 100%;
 }
 
 .filter-group input:focus,
@@ -99,11 +102,12 @@ h2 {
     cursor: pointer;
     transition: all 0.3s ease;
     white-space: nowrap;
-    min-height: 40px;
+    height: 42px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
+    align-self: flex-end;
 }
 
 .btn-search:hover {

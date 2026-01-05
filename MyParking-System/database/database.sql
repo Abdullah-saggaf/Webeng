@@ -85,8 +85,6 @@ CREATE TABLE Booking (
     booking_ID INT PRIMARY KEY AUTO_INCREMENT,
     space_ID INT NOT NULL,
     vehicle_ID INT NOT NULL,
-    actual_vehicle_id INT NULL,
-    actual_plate_number VARCHAR(15) NULL,
     booking_date DATE NOT NULL,
     start_time TIME NOT NULL,
     end_time TIME NOT NULL,
@@ -98,8 +96,7 @@ CREATE TABLE Booking (
     qr_code_value VARCHAR(50) NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (space_ID) REFERENCES ParkingSpace(space_ID) ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (vehicle_ID) REFERENCES Vehicle(vehicle_ID) ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (actual_vehicle_id) REFERENCES Vehicle(vehicle_ID) ON DELETE SET NULL ON UPDATE CASCADE
+    FOREIGN KEY (vehicle_ID) REFERENCES Vehicle(vehicle_ID) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================

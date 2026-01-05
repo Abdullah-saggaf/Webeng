@@ -51,6 +51,12 @@ if (isLoggedIn()) {
 }
 
 $error_message = '';
+$success_message = '';
+
+// Check for password reset success
+if (isset($_GET['reset']) && $_GET['reset'] === 'success') {
+    $success_message = 'Your password has been reset successfully. Please log in with your new password.';
+}
 
 // CSRF token setup
 if (empty($_SESSION['csrf_token'])) {
@@ -265,6 +271,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-weight: 600;
         }
 
+        .success-message {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+            padding: 12px 14px;
+            border-radius: 12px;
+            margin-bottom: 14px;
+            font-weight: 600;
+        }
+
         button[type="submit"] {
             width: 100%;
             padding: 12px 14px;
@@ -321,6 +337,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <h2>Sign In</h2>
             <p class="desc">Sign in with your MyParking account </p>
 
+            <?php if (!empty($success_message)): ?>
+                <div class="success-message" role="alert"><?php echo htmlspecialchars($success_message); ?></div>
+            <?php endif; ?>
+
             <?php if (!empty($error_message)): ?>
                 <div class="error-message" role="alert"><?php echo htmlspecialchars($error_message); ?></div>
             <?php endif; ?>
@@ -339,6 +359,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="form-group" style="display:flex; align-items:center; gap:8px; margin-top:-6px;">
                     <input type="checkbox" id="show-password" style="width:auto;">
                     <label for="show-password" style="margin:0; font-weight:600;">Show password</label>
+                </div>
+
+                <div style="text-align:right; margin-top:8px; margin-bottom:16px;">
+                    <a href="<?php echo appUrl('/forgot_password.php'); ?>" style="color: var(--umpsa-blue); text-decoration:none; font-size:14px; font-weight:600;">Forgot password?</a>
                 </div>
 
                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">

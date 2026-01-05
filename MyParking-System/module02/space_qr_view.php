@@ -50,14 +50,14 @@ try {
     
     $stmt = $db->prepare("
         SELECT b.booking_ID, b.booking_status, b.start_time, b.end_time, 
-               u.username
+               u.username, b.booking_date
         FROM Booking b
         JOIN Vehicle v ON b.vehicle_ID = v.vehicle_ID
         JOIN User u ON v.user_ID = u.user_ID
         WHERE b.space_ID = ? 
-          AND b.booking_date = CURDATE()
+          AND b.booking_date >= CURDATE()
           AND b.booking_status IN ('confirmed', 'active')
-          AND CURTIME() BETWEEN b.start_time AND b.end_time
+        ORDER BY b.booking_date ASC, b.start_time ASC
         LIMIT 1
     ");
     $stmt->execute([$spaceId]);

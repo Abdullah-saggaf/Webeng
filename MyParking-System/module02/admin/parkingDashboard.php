@@ -121,14 +121,21 @@ renderHeader('Parking Dashboard');
 
 <!-- Main dashboard container -->
 <div class="dashboard-container">
-    <h1 class="page-title">🅿️ Parking Dashboard</h1>
+    <div class="dashboard-header">
+        <h1 class="page-title">
+            <i class="fas fa-chart-line"></i> Parking Dashboard
+        </h1>
+        <a href="<?php echo APP_BASE_PATH; ?>/admin.php" class="back-button">
+            <i class="fas fa-arrow-left"></i> Back to Admin Panel
+        </a>
+    </div>
     
     <!-- ==================== KPI CARDS SECTION ==================== -->
     <!-- Displays 4 key performance indicators in a grid layout -->
     <div class="kpi-grid">
         <!-- KPI Card 1: Total number of parking areas in the system -->
-        <div class="kpi-card">
-            <div class="kpi-icon">🏢</div>
+        <div class="kpi-card kpi-card-areas">
+            <div class="kpi-icon"><i class="fas fa-building"></i></div>
             <div class="kpi-content">
                 <div class="kpi-label">Total Parking Areas</div>
                 <div class="kpi-value"><?php echo $totalAreas; ?></div>
@@ -136,8 +143,8 @@ renderHeader('Parking Dashboard');
         </div>
         
         <!-- KPI Card 2: Total number of parking spaces across all areas -->
-        <div class="kpi-card">
-            <div class="kpi-icon">🅿️</div>
+        <div class="kpi-card kpi-card-spaces">
+            <div class="kpi-icon"><i class="fas fa-parking"></i></div>
             <div class="kpi-content">
                 <div class="kpi-label">Total Parking Spaces</div>
                 <div class="kpi-value"><?php echo $totalSpaces; ?></div>
@@ -145,8 +152,8 @@ renderHeader('Parking Dashboard');
         </div>
         
         <!-- KPI Card 3: Spaces in booking areas (require reservation) -->
-        <div class="kpi-card">
-            <div class="kpi-icon">📅</div>
+        <div class="kpi-card kpi-card-booking">
+            <div class="kpi-icon"><i class="fas fa-calendar-check"></i></div>
             <div class="kpi-content">
                 <div class="kpi-label">Spaces in Booking Areas</div>
                 <div class="kpi-value"><?php echo $bookingSpaces; ?></div>
@@ -154,8 +161,8 @@ renderHeader('Parking Dashboard');
         </div>
         
         <!-- KPI Card 4: Spaces in general areas (first-come first-served) -->
-        <div class="kpi-card">
-            <div class="kpi-icon">🚗</div>
+        <div class="kpi-card kpi-card-general">
+            <div class="kpi-icon"><i class="fas fa-car"></i></div>
             <div class="kpi-content">
                 <div class="kpi-label">Spaces in General Areas</div>
                 <div class="kpi-value"><?php echo $generalSpaces; ?></div>
@@ -170,7 +177,7 @@ renderHeader('Parking Dashboard');
         <!-- Shows total capacity vs occupied spaces for each parking area on selected date -->
         <div class="chart-card">
             <div class="chart-header">
-                <h3>📊 Capacity & Occupancy by Area</h3>
+                <h3><i class="fas fa-chart-bar"></i> Capacity & Occupancy by Area</h3>
                 <!-- Date filter: When user selects a date, page reloads with new date parameter -->
                 <div class="date-filter">
                     <label for="chartDate">Date:</label>
@@ -188,7 +195,7 @@ renderHeader('Parking Dashboard');
         <!-- Shows trend of occupied spaces over the last 7 days -->
         <div class="chart-card">
             <div class="chart-header">
-                <h3>📈 Daily Occupied Spaces</h3>
+                <h3><i class="fas fa-chart-line"></i> Daily Occupied Spaces</h3>
                 <p class="chart-subtitle">Last 7 Days</p>
             </div>
             <div class="chart-container">
