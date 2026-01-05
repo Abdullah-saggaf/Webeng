@@ -5,7 +5,6 @@
  */
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/../database/db_config.php';
-require_once __DIR__ . '/../config.php';
 
 // Redirect if already logged in
 if (isLoggedIn()) {
