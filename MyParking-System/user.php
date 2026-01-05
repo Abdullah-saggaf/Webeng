@@ -49,7 +49,7 @@ renderHeader('Student Dashboard');
 <div class="card" style="margin-top: 24px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
         <h2>My Vehicles</h2>
-        <a href="<?php echo appUrl('/student/main.php'); ?>" class="btn">Manage Vehicles</a>
+        <a href="<?php echo appUrl('/student/vehicles.php'); ?>" class="btn">Manage Vehicles</a>
     </div>
     
     <?php if ($vehicles): ?>
@@ -80,7 +80,7 @@ renderHeader('Student Dashboard');
             </tbody>
         </table>
     <?php else: ?>
-        <p style="text-align: center; color: #6b7280; padding: 20px;">No vehicles registered yet. <a href="<?php echo appUrl('/student/main.php'); ?>">Register your first vehicle</a></p>
+        <p style="text-align: center; color: #6b7280; padding: 20px;">No vehicles registered yet. <a href="<?php echo appUrl('/student/vehicles.php'); ?>">Register your first vehicle</a></p>
     <?php endif; ?>
 </div>
 

@@ -11,6 +11,46 @@ $messageType = 'success';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
+        $action = $_POST['action'] ?? 'update';
+        
+        // Handle profile deletion
+        if ($action === 'delete_profile') {
+            $confirmDelete = $_POST['confirm_delete'] ?? '';
+            
+            if ($confirmDelete !== 'DELETE') {
+                throw new Exception('Please type DELETE to confirm account deletion.');
+            }
+            
+            $db = getDB();
+            $db->beginTransaction();
+            
+            try {
+                // Delete user's vehicles first
+                $stmt = $db->prepare("DELETE FROM Vehicle WHERE owner_id = :user_id");
+                $stmt->execute([':user_id' => $user['user_id']]);
+                
+                // Delete user's bookings if any
+                $stmt = $db->prepare("DELETE FROM Booking WHERE user_ID = :user_id");
+                $stmt->execute([':user_id' => $user['user_id']]);
+                
+                // Delete the user
+                $stmt = $db->prepare("DELETE FROM User WHERE user_ID = :user_id");
+                $stmt->execute([':user_id' => $user['user_id']]);
+                
+                $db->commit();
+                
+                // Destroy session and redirect
+                $_SESSION = [];
+                session_destroy();
+                header('Location: ' . appUrl('/login.php?deleted=1'));
+                exit();
+            } catch (Exception $e) {
+                $db->rollBack();
+                throw new Exception('Failed to delete profile: ' . $e->getMessage());
+            }
+        }
+        
+        // Handle profile update
         $username = trim($_POST['username'] ?? '');
         $email = trim($_POST['email'] ?? '');
         $phone = trim($_POST['phone'] ?? '');
@@ -133,5 +173,37 @@ renderHeader('My Profile');
         </div>
     </form>
 </div>
+
+<!-- Delete Profile Section -->
+<div class="card danger-zone">
+    <h2><i class="fas fa-exclamation-triangle"></i> Danger Zone</h2>
+    <p>Once you delete your account, there is no going back. This will permanently delete your profile, vehicles, bookings, and all related data.</p>
+    
+    <details style="margin-top: 16px;">
+        <summary class="delete-summary">
+            <i class="fas fa-trash-alt"></i> Delete My Account
+        </summary>
+        
+        <form method="POST" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']); ?>" onsubmit="return confirmDelete();" class="delete-form">
+            <input type="hidden" name="action" value="delete_profile">
+            
+            <h3>⚠️ FINAL WARNING</h3>
+            <p style="color: #7f1d1d; margin-bottom: 16px; font-size: 14px;">This action cannot be undone. To confirm, please type the word <strong>DELETE</strong> below:</p>
+            
+            <label for="confirm_delete">Confirmation Code</label>
+            <input type="text" id="confirm_delete" name="confirm_delete" placeholder="Type DELETE" required>
+            
+            <button type="submit">
+                <i class="fas fa-trash-alt"></i> Permanently Delete My Account
+            </button>
+        </form>
+    </details>
+</div>
+
+<script>
+function confirmDelete() {
+    return confirm('⚠️ FINAL WARNING: This will permanently delete your account and all your data. Are you absolutely sure?');
+}
+</script>
 
 <?php renderFooter(); ?>

@@ -3,7 +3,7 @@ require_once __DIR__ . '/../auth.php';
 require_once __DIR__ . '/../../layout.php';
 require_once __DIR__ . '/../../database/db_config.php';
 
-requireRole(['safety_staff']);
+requireRole(['fk_staff']);
 
 $user = currentUser();
 $message = '';
@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             $db = getDB();
             
-            // Delete the user (safety staff typically don't have vehicles or bookings)
+            // Delete the user (admins typically don't have vehicles or bookings)
             $stmt = $db->prepare("DELETE FROM User WHERE user_ID = :user_id");
             
             if ($stmt->execute([':user_id' => $user['user_id']])) {
@@ -112,11 +112,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-renderHeader('My Profile');
+renderHeader('Admin Profile');
 ?>
 
 <div class="card">
-    <h2>My Profile</h2>
+    <h2>Admin Profile</h2>
     
     <?php if ($message): ?>
         <div class="msg <?php echo $messageType; ?>"><?php echo htmlspecialchars($message); ?></div>
@@ -137,7 +137,7 @@ renderHeader('My Profile');
             <input type="tel" name="phone" value="<?php echo htmlspecialchars($user['phone_number'] ?? ''); ?>" placeholder="e.g., 0123456789">
             
             <label>Role</label>
-            <input type="text" value="<?php echo ucfirst(str_replace('_', ' ', $user['user_type'])); ?>" disabled style="background: #f3f4f6; cursor: not-allowed;">
+            <input type="text" value="FK Staff / Administrator" disabled style="background: #f3f4f6; cursor: not-allowed;">
             
             <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
             
@@ -155,7 +155,7 @@ renderHeader('My Profile');
             
             <div class="actions" style="margin-top: 30px;">
                 <button type="submit" class="btn">Update Profile</button>
-                <a href="<?php echo appUrl('/staff.php'); ?>" class="btn secondary">Cancel</a>
+                <a href="<?php echo appUrl('/admin.php'); ?>" class="btn secondary">Cancel</a>
             </div>
         </div>
     </form>
@@ -164,7 +164,7 @@ renderHeader('My Profile');
 <!-- Delete Profile Section -->
 <div class="card danger-zone">
     <h2><i class="fas fa-exclamation-triangle"></i> Danger Zone</h2>
-    <p>Once you delete your account, there is no going back. This will permanently delete your profile and all related data.</p>
+    <p>Once you delete your account, there is no going back. This will permanently delete your admin profile and all related data.</p>
     
     <details style="margin-top: 16px;">
         <summary class="delete-summary">

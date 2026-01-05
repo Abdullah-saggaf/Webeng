@@ -13,44 +13,6 @@ define('DB_PASS', '');
 define('DB_NAME', 'parking_management');
 
 // ============================================
-// QR Code Base URL Configuration (Module 3)
-// ============================================
-// IMPORTANT: Configure this for QR codes to work on mobile phones
-//
-// Structure: http://YOUR_IP:PORT/PROJECT_FOLDER
-//
-// YOUR_IP: Your PC's local network IP (find with: ipconfig in cmd)
-//          Example: 192.168.0.77, 192.168.1.100, etc.
-//
-// PORT: Only add if NOT using default port 80
-//       Default Apache: :80 (omit this, just use http://IP)
-//       Custom port: :3000, :8080, etc.
-//       Examples:
-//         - http://192.168.0.77 (default port 80)
-//         - http://192.168.0.77:3000 (custom port)
-//
-// PROJECT_FOLDER: Path from htdocs to your project
-//                 For XAMPP: c:\xampp\htdocs\FOLDER\PROJECT
-//                 URL becomes: http://IP/FOLDER/PROJECT
-//                 Example: /Webeng/MyParking-System
-//
-// WHY 404 "Not Found" happens:
-// 1. Wrong IP - phone can't reach server
-// 2. Wrong PORT - server listening on different port
-// 3. Wrong FOLDER - Apache looks in wrong directory
-// 4. Missing file - the PHP file doesn't exist at that path
-//
-// HOW TO FIX:
-// 1. Find your IP: Run 'ipconfig' in cmd, look for IPv4 Address
-// 2. Check port: Apache usually uses 80 (http) or 443 (https)
-// 3. Verify folder: Your project is in c:\xampp\htdocs\Webeng\MyParking-System
-//    So URL folder is: /Webeng/MyParking-System
-// 4. Test URL in browser: http://192.168.0.77/Webeng/MyParking-System/module03/student/parking_session.php
-//
-// Current Configuration:
-define('QR_BASE_URL', 'http://192.168.0.77/Webeng/MyParking-System');
-
-// ============================================
 // Database Connection
 // ============================================
 function getDB() {
@@ -219,7 +181,8 @@ function getVehicleForUser($vehicle_id, $user_id) {
 
 function updateVehicle($vehicle_id, $user_id, $fields) {
     $db = getDB();
-    $allowed = ['vehicle_type', 'vehicle_model', 'license_plate', 'grant_document', 'grant_status', 'rejection_reason'];
+    // Note: 'rejection_reason' column does not exist in schema; do not include it
+    $allowed = ['vehicle_type', 'vehicle_model', 'license_plate', 'grant_document', 'grant_status'];
     $setParts = [];
     $params = [
         ':vehicle_id' => $vehicle_id,
@@ -278,13 +241,33 @@ function getPendingVehicles(array $filters = []) {
     return $stmt->fetchAll();
 }
 
-function setVehicleStatus($vehicle_id, $status) {
+function setVehicleStatus($vehicle_id, $status, $reason = null) {
     $db = getDB();
-    $stmt = $db->prepare("UPDATE Vehicle SET grant_status = :status WHERE vehicle_ID = :vehicle_id");
-    return $stmt->execute([
-        ':vehicle_id' => $vehicle_id,
-        ':status' => $status
-    ]);
+    
+    // If status is "Rejected" and reason is provided, update both grant_status and rejection_reason
+    // If status is "Approved", clear the rejection_reason
+    if ($status === 'Rejected' && !empty($reason)) {
+        $stmt = $db->prepare("UPDATE Vehicle SET grant_status = :status, rejection_reason = :reason WHERE vehicle_ID = :vehicle_id");
+        return $stmt->execute([
+            ':vehicle_id' => $vehicle_id,
+            ':status' => $status,
+            ':reason' => $reason
+        ]);
+    } elseif ($status === 'Approved') {
+        // Clear rejection reason when approving
+        $stmt = $db->prepare("UPDATE Vehicle SET grant_status = :status, rejection_reason = NULL WHERE vehicle_ID = :vehicle_id");
+        return $stmt->execute([
+            ':vehicle_id' => $vehicle_id,
+            ':status' => $status
+        ]);
+    } else {
+        // For other statuses or no reason, just update status
+        $stmt = $db->prepare("UPDATE Vehicle SET grant_status = :status WHERE vehicle_ID = :vehicle_id");
+        return $stmt->execute([
+            ':vehicle_id' => $vehicle_id,
+            ':status' => $status
+        ]);
+    }
 }
 
 function getApprovedVehicles() {

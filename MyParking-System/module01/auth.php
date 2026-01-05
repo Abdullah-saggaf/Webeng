@@ -1,4 +1,21 @@
 <?php
+/**
+ * Auth & Configuration
+ * MyParking System - Module 01
+ */
+
+// ========== Configuration Settings ==========
+// Demo mode - shows password reset link on screen (DO NOT use in production)
+define('DEMO_MODE', true);
+
+// Application settings
+define('APP_NAME', 'MyParking System');
+define('SESSION_LIFETIME', 3600); // 1 hour
+
+// Password reset settings
+define('RESET_TOKEN_EXPIRY_MINUTES', 15);
+
+// ========== Auth Helpers ==========
 // Auth/bootstrap helpers for Module 01 pages
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
