@@ -40,12 +40,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Validate inputs before database insertion
         if ($name && $type && $capacity > 0) {
             try {
-                // PREPARED STATEMENT: Prevents SQL injection by using placeholders (?)
-                // INSERT INTO ParkingLot table with 4 fields
-                $stmt = $db->prepare("INSERT INTO ParkingLot (parkingLot_name, parkingLot_type, is_booking_lot, capacity) VALUES (?, ?, ?, ?)");
-                $stmt->execute([$name, $type, $isBooking, $capacity]);
-                $message = "Parking area created successfully!";
-                $messageType = 'success';
+                // Check total capacity limit (200 spaces maximum)
+                $stmt = $db->query("SELECT SUM(capacity) as total FROM ParkingLot");
+                $currentTotal = $stmt->fetch()['total'] ?? 0;
+                
+                if (($currentTotal + $capacity) > 200) {
+                    $remaining = 200 - $currentTotal;
+                    $message = "Cannot add area! Total capacity limit is 200 spaces. Currently: {$currentTotal}, Available: {$remaining}";
+                    $messageType = 'error';
+                } else {
+                    // PREPARED STATEMENT: Prevents SQL injection by using placeholders (?)
+                    // INSERT INTO ParkingLot table with 4 fields
+                    $stmt = $db->prepare("INSERT INTO ParkingLot (parkingLot_name, parkingLot_type, is_booking_lot, capacity) VALUES (?, ?, ?, ?)");
+                    $stmt->execute([$name, $type, $isBooking, $capacity]);
+                    $message = "Parking area created successfully!";
+                    $messageType = 'success';
+                }
             } catch (PDOException $e) {
                 // Catch database errors (e.g., duplicate names, constraint violations)
                 $message = "Error: " . $e->getMessage();
@@ -66,11 +76,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Validate inputs
         if ($id && $name && $type && $capacity > 0) {
             try {
-                // UPDATE ParkingLot WHERE parkingLot_ID matches
-                $stmt = $db->prepare("UPDATE ParkingLot SET parkingLot_name=?, parkingLot_type=?, is_booking_lot=?, capacity=? WHERE parkingLot_ID=?");
-                $stmt->execute([$name, $type, $isBooking, $capacity, $id]);
-                $message = "Parking area updated successfully!";
-                $messageType = 'success';
+                // Check total capacity limit excluding current area
+                $stmt = $db->prepare("SELECT SUM(capacity) as total FROM ParkingLot WHERE parkingLot_ID != ?");
+                $stmt->execute([$id]);
+                $currentTotal = $stmt->fetch()['total'] ?? 0;
+                
+                if (($currentTotal + $capacity) > 200) {
+                    $remaining = 200 - $currentTotal;
+                    $message = "Cannot update! Total capacity limit is 200 spaces. Current total (excluding this area): {$currentTotal}, Available: {$remaining}";
+                    $messageType = 'error';
+                } else {
+                    // UPDATE ParkingLot WHERE parkingLot_ID matches
+                    $stmt = $db->prepare("UPDATE ParkingLot SET parkingLot_name=?, parkingLot_type=?, is_booking_lot=?, capacity=? WHERE parkingLot_ID=?");
+                    $stmt->execute([$name, $type, $isBooking, $capacity, $id]);
+                    $message = "Parking area updated successfully!";
+                    $messageType = 'success';
+                }
             } catch (PDOException $e) {
                 $message = "Error: " . $e->getMessage();
                 $messageType = 'error';
@@ -82,22 +103,114 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     elseif ($action === 'delete') {
         $id = (int)($_POST['area_id'] ?? 0);
         
-        // BUSINESS RULE: Cannot delete area if it has parking spaces
-        // Check child records in ParkingSpace table (FK: parkingLot_ID)
-        $stmt = $db->prepare("SELECT COUNT(*) as cnt FROM ParkingSpace WHERE parkingLot_ID=?");
+        // BUSINESS RULE: Cannot delete area if there are any bookings for spaces in this area
+        $stmt = $db->prepare("
+            SELECT COUNT(*) as cnt 
+            FROM Booking b
+            JOIN ParkingSpace ps ON b.space_ID = ps.space_ID
+            WHERE ps.parkingLot_ID = ?
+        ");
         $stmt->execute([$id]);
-        $count = $stmt->fetch()['cnt'];
+        $bookingCount = $stmt->fetch()['cnt'];
         
-        if ($count > 0) {
-            // Prevent deletion to maintain referential integrity
-            $message = "Cannot delete area with existing parking spaces!";
+        if ($bookingCount > 0) {
+            $message = "Cannot delete area! There are {$bookingCount} booking(s) associated with spaces in this area. Delete all bookings first.";
             $messageType = 'error';
         } else {
+            // CASCADE DELETE: Delete all parking spaces in this area first, then delete the area
             try {
-                // Safe to delete: No child records exist
+                // Begin transaction for atomic operation
+                $db->beginTransaction();
+                
+                // First, delete all parking spaces in this area
+                $stmt = $db->prepare("DELETE FROM ParkingSpace WHERE parkingLot_ID=?");
+                $stmt->execute([$id]);
+                $deletedSpaces = $stmt->rowCount();
+                
+                // Then delete the parking area
                 $stmt = $db->prepare("DELETE FROM ParkingLot WHERE parkingLot_ID=?");
                 $stmt->execute([$id]);
-                $message = "Parking area deleted successfully!";
+                
+                // Commit transaction
+                $db->commit();
+                
+                if ($deletedSpaces > 0) {
+                    $message = "Parking area deleted successfully! ({$deletedSpaces} parking spaces also removed)";
+                } else {
+                    $message = "Parking area deleted successfully!";
+                }
+                $messageType = 'success';
+            } catch (PDOException $e) {
+                // Rollback on error
+                $db->rollBack();
+                $message = "Error: " . $e->getMessage();
+                $messageType = 'error';
+            }
+        }
+    }
+    
+    /* ----- ACTION: Close Spaces for Event ----- */
+    elseif ($action === 'close_spaces') {
+        $areaId = (int)($_POST['area_id'] ?? 0);
+        $spacesToClose = (int)($_POST['spaces_to_close'] ?? 0);
+        $reason = trim($_POST['closure_reason'] ?? '');
+        $startDatetime = $_POST['closure_start'] ?? '';
+        $endDatetime = $_POST['closure_end'] ?? '';
+        
+        if ($areaId && $spacesToClose > 0 && $reason && $startDatetime && $endDatetime) {
+            try {
+                // Check if spaces_to_close doesn't exceed capacity
+                $stmt = $db->prepare("SELECT capacity, parkingLot_name FROM ParkingLot WHERE parkingLot_ID = ?");
+                $stmt->execute([$areaId]);
+                $area = $stmt->fetch();
+                
+                if ($spacesToClose > $area['capacity']) {
+                    $message = "Cannot close {$spacesToClose} spaces! Area capacity is only {$area['capacity']}.";
+                    $messageType = 'error';
+                } else {
+                    // Store closure info as JSON in remarks
+                    $closureData = json_encode([
+                        'area_id' => $areaId,
+                        'area_name' => $area['parkingLot_name'],
+                        'spaces_closed' => $spacesToClose,
+                        'reason' => $reason,
+                        'start' => $startDatetime,
+                        'end' => $endDatetime,
+                        'created_by' => $_SESSION['user_id']
+                    ]);
+                    
+                    // Insert closure record into ParkingLog (using booking_ID = 0 for area-level events)
+                    $stmt = $db->prepare("
+                        INSERT INTO ParkingLog (booking_ID, event_time, event_type, remarks)
+                        VALUES (0, NOW(), 'CLOSURE_START', ?)
+                    ");
+                    $stmt->execute([$closureData]);
+                    
+                    $message = "Successfully closed {$spacesToClose} spaces for event!";
+                    $messageType = 'success';
+                }
+            } catch (PDOException $e) {
+                $message = "Error: " . $e->getMessage();
+                $messageType = 'error';
+            }
+        }
+    }
+    
+    /* ----- ACTION: End Space Closure ----- */
+    elseif ($action === 'end_closure') {
+        $logId = (int)($_POST['log_id'] ?? 0);
+        
+        if ($logId) {
+            try {
+                // Mark closure as ended
+                $stmt = $db->prepare("
+                    INSERT INTO ParkingLog (booking_ID, event_time, event_type, remarks)
+                    SELECT 0, NOW(), 'CLOSURE_END', CONCAT('Ended closure: ', log_ID)
+                    FROM ParkingLog WHERE log_ID = ?
+                ");
+                $stmt->execute([$logId]);
+                
+                $message = "Space closure ended successfully!";
                 $messageType = 'success';
             } catch (PDOException $e) {
                 $message = "Error: " . $e->getMessage();
@@ -157,10 +270,38 @@ $totalPages = ceil($totalRecords / $limit); // Calculate total pages (round up)
 // Fetch parking areas for current page
 // ORDER BY parkingLot_name: Sort alphabetically by area name
 // LIMIT/OFFSET: Pagination (e.g., LIMIT 10 OFFSET 20 = rows 21-30)
-$sql = "SELECT parkingLot_ID, parkingLot_name, parkingLot_type, is_booking_lot, capacity FROM ParkingLot $whereClause ORDER BY parkingLot_name LIMIT $limit OFFSET $offset";
+$sql = "SELECT parkingLot_ID, parkingLot_name, parkingLot_type, is_booking_lot, capacity 
+        FROM ParkingLot $whereClause ORDER BY parkingLot_name LIMIT $limit OFFSET $offset";
 $stmt = $db->prepare($sql);
 $stmt->execute($params);
 $areas = $stmt->fetchAll(); // Fetch all results as associative array
+
+// Get active closures from ParkingLog
+$activeClosures = [];
+$closureStmt = $db->query("
+    SELECT log_ID, remarks, event_time
+    FROM ParkingLog
+    WHERE event_type = 'CLOSURE_START'
+    AND log_ID NOT IN (
+        SELECT CAST(SUBSTRING_INDEX(remarks, ': ', -1) AS UNSIGNED)
+        FROM ParkingLog
+        WHERE event_type = 'CLOSURE_END'
+    )
+    ORDER BY event_time DESC
+");
+$closureLogs = $closureStmt->fetchAll();
+foreach ($closureLogs as $log) {
+    $data = json_decode($log['remarks'], true);
+    if ($data && isset($data['area_id']) && strtotime($data['end']) > time()) {
+        $activeClosures[$data['area_id']] = [
+            'log_id' => $log['log_ID'],
+            'spaces_closed' => $data['spaces_closed'],
+            'reason' => $data['reason'],
+            'start' => $data['start'],
+            'end' => $data['end']
+        ];
+    }
+}
 
 // Load main layout wrapper (header, sidebar, navigation from layout.php)
 require_once __DIR__ . '/../../layout.php';

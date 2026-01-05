@@ -34,14 +34,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if ($areaId && $spaceNumber) {
             try {
-                // Generate unique QR code value (format: SPACE_{areaID}_{spaceNumber}_{timestamp})
-                $qrCode = "SPACE_{$areaId}_{$spaceNumber}_" . time();
+                // Check total parking spaces limit (200 maximum)
+                $stmt = $db->query("SELECT COUNT(*) as total FROM ParkingSpace");
+                $currentTotal = $stmt->fetch()['total'] ?? 0;
                 
-                // PREPARED STATEMENT: Insert new space with auto-generated QR code
-                $stmt = $db->prepare("INSERT INTO ParkingSpace (parkingLot_ID, space_number, qr_code_value) VALUES (?, ?, ?)");
-                $stmt->execute([$areaId, $spaceNumber, $qrCode]);
-                $message = "Parking space created successfully!";
-                $messageType = 'success';
+                if ($currentTotal >= 200) {
+                    $message = "Cannot add space! Maximum limit of 200 parking spaces reached.";
+                    $messageType = 'error';
+                } else {
+                    // Generate unique QR code value (format: SPACE_{areaID}_{spaceNumber}_{timestamp})
+                    $qrCode = "SPACE_{$areaId}_{$spaceNumber}_" . time();
+                    
+                    // PREPARED STATEMENT: Insert new space with auto-generated QR code
+                    $stmt = $db->prepare("INSERT INTO ParkingSpace (parkingLot_ID, space_number, qr_code_value) VALUES (?, ?, ?)");
+                    $stmt->execute([$areaId, $spaceNumber, $qrCode]);
+                    $message = "Parking space created successfully!";
+                    $messageType = 'success';
+                }
             } catch (PDOException $e) {
                 // Catch duplicate space_number or FK constraint violations
                 $message = "Error: " . $e->getMessage();
@@ -60,26 +69,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // VALIDATION: Limit batch creation to 100 spaces max
         if ($areaId && $quantity > 0 && $quantity <= 100) {
             try {
-                // BEGIN TRANSACTION: Ensures all-or-nothing (rollback if any insert fails)
-                $db->beginTransaction();
-                $created = 0;
+                // Check total parking spaces limit (200 maximum)
+                $stmt = $db->query("SELECT COUNT(*) as total FROM ParkingSpace");
+                $currentTotal = $stmt->fetch()['total'] ?? 0;
+                $remaining = 200 - $currentTotal;
                 
-                // Loop to create multiple spaces (e.g., A-001, A-002, A-003...)
-                for ($i = 0; $i < $quantity; $i++) {
-                    $num = $startNum + $i;
-                    // Format: Prefix-XXX (e.g., A-001, A-002)
-                    $spaceNumber = $prefix . '-' . str_pad($num, 3, '0', STR_PAD_LEFT);
-                    $qrCode = "SPACE_{$areaId}_{$spaceNumber}_" . time() . "_$i";
+                if ($quantity > $remaining) {
+                    $message = "Cannot add {$quantity} spaces! Maximum limit is 200 spaces. Currently: {$currentTotal}, Available: {$remaining}";
+                    $messageType = 'error';
+                } else {
+                    // BEGIN TRANSACTION: Ensures all-or-nothing (rollback if any insert fails)
+                    $db->beginTransaction();
+                    $created = 0;
                     
-                    $stmt = $db->prepare("INSERT INTO ParkingSpace (parkingLot_ID, space_number, qr_code_value) VALUES (?, ?, ?)");
-                    $stmt->execute([$areaId, $spaceNumber, $qrCode]);
-                    $created++;
+                    // Loop to create multiple spaces (e.g., A-001, A-002, A-003...)
+                    for ($i = 0; $i < $quantity; $i++) {
+                        $num = $startNum + $i;
+                        // Format: Prefix-XXX (e.g., A-001, A-002)
+                        $spaceNumber = $prefix . '-' . str_pad($num, 3, '0', STR_PAD_LEFT);
+                        $qrCode = "SPACE_{$areaId}_{$spaceNumber}_" . time() . "_$i";
+                        
+                        $stmt = $db->prepare("INSERT INTO ParkingSpace (parkingLot_ID, space_number, qr_code_value) VALUES (?, ?, ?)");
+                        $stmt->execute([$areaId, $spaceNumber, $qrCode]);
+                        $created++;
+                    }
+                    
+                    // COMMIT TRANSACTION: All inserts successful
+                    $db->commit();
+                    $message = "Successfully created $created parking spaces!";
+                    $messageType = 'success';
                 }
-                
-                // COMMIT TRANSACTION: All inserts successful
-                $db->commit();
-                $message = "Successfully created $created parking spaces!";
-                $messageType = 'success';
             } catch (PDOException $e) {
                 // ROLLBACK: If any error occurs, undo all inserts
                 $db->rollBack();
