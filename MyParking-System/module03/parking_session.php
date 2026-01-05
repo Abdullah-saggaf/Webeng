@@ -31,7 +31,7 @@ if (!$bookingId) {
 // Token-based authentication (for QR code access)
 if ($token) {
     // Verify token matches booking
-    $stmt = $db->prepare("SELECT booking_ID FROM Booking WHERE booking_ID = ? AND qr_token = ?");
+    $stmt = $db->prepare("SELECT booking_ID FROM Booking WHERE booking_ID = ? AND qr_code_value = ?");
     $stmt->execute([$bookingId, $token]);
     $validToken = $stmt->fetch();
     
@@ -193,7 +193,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Include layout if user is logged in, otherwise use minimal header
 if ($token) {
     // Minimal header for QR code access (no navigation)
-    $basePath = '/Webeng/MyParking-System';
+    $basePath = QR_BASE_URL;
     ?>
     <!DOCTYPE html>
     <html lang="en">

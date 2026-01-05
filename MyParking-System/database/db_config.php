@@ -43,12 +43,12 @@ define('DB_NAME', 'parking_management');
 // HOW TO FIX:
 // 1. Find your IP: Run 'ipconfig' in cmd, look for IPv4 Address
 // 2. Check port: Apache usually uses 80 (http) or 443 (https)
-// 3. Verify folder: Your project is in c:\xampp\htdocs\Webeng\MyParking-System
-//    So URL folder is: /Webeng/MyParking-System
-// 4. Test URL in browser: http://192.168.0.77/Webeng/MyParking-System/module03/student/parking_session.php
+// 3. Verify folder: Your project is in c:\xampp\htdocs\MyParking-System
+//    So URL folder is: /MyParking-System
+// 4. Test URL in browser: http://YOUR_IP/MyParking-System/module03/student/parking_session.php
 //
 // Current Configuration:
-define('QR_BASE_URL', 'http://192.168.0.77/Webeng/MyParking-System');
+define('QR_BASE_URL', 'http://192.168.0.24/MyParking-System');
 
 // ============================================
 // Database Connection

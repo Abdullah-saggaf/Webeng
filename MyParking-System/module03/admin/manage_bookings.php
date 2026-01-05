@@ -632,8 +632,8 @@ renderHeader('View & Manage Bookings');
                                 b.start_time,
                                 b.end_time,
                                 b.booking_status,
-                                b.session_started_at,
-                                b.session_ended_at
+                                b.actual_start_time,
+                                b.actual_end_time
                             FROM Booking b
                             JOIN Vehicle v ON b.vehicle_ID = v.vehicle_ID
                             JOIN User u ON v.user_ID = u.user_ID
@@ -648,9 +648,9 @@ renderHeader('View & Manage Bookings');
                         
                         foreach ($history as $record):
                             $duration = '';
-                            if ($record['session_started_at'] && $record['session_ended_at']) {
-                                $start = new DateTime($record['session_started_at']);
-                                $end = new DateTime($record['session_ended_at']);
+                            if ($record['actual_start_time'] && $record['actual_end_time']) {
+                                $start = new DateTime($record['actual_start_time']);
+                                $end = new DateTime($record['actual_end_time']);
                                 $diff = $start->diff($end);
                                 $duration = $diff->format('%hh %im');
                             }

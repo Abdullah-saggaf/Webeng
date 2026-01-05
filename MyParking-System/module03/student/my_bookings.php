@@ -200,7 +200,7 @@ $stmt = $db->prepare("
         v.license_plate,
         v.vehicle_model,
         v.vehicle_type,
-        b.qr_token
+        b.qr_code_value
     FROM Booking b
     JOIN ParkingSpace ps ON b.space_ID = ps.space_ID
     JOIN ParkingLot pl ON ps.parkingLot_ID = pl.parkingLot_ID
@@ -436,9 +436,9 @@ renderHeader('My Bookings');
 // Generate QR codes for all confirmed bookings
 document.addEventListener('DOMContentLoaded', function() {
     <?php foreach ($bookings as $booking): ?>
-        <?php if ($booking['booking_status'] === 'confirmed' && !empty($booking['qr_token'])): ?>
+        <?php if ($booking['booking_status'] === 'confirmed' && !empty($booking['qr_code_value'])): ?>
             new QRCode(document.getElementById('qrcode_<?php echo $booking['booking_ID']; ?>'), {
-                text: '<?php echo QR_BASE_URL; ?>/module03/parking_session.php?booking_id=<?php echo $booking['booking_ID']; ?>&token=<?php echo $booking['qr_token']; ?>',
+                text: '<?php echo QR_BASE_URL; ?>/module03/parking_session.php?booking_id=<?php echo $booking['booking_ID']; ?>&token=<?php echo $booking['qr_code_value']; ?>',
                 width: 180,
                 height: 180,
                 colorDark: '#000000',
