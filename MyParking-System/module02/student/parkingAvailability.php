@@ -27,7 +27,7 @@ $selectedArea = (int)($_GET['area_id'] ?? 0); // 0 = All areas
 $areas = $db->query("SELECT * FROM ParkingLot WHERE parkingLot_type = 'Student' ORDER BY parkingLot_name")->fetchAll();
 
 /* ==================== SUMMARY COUNTS ==================== */
-// Build WHERE clause for filtering
+// Build WHERE clause and params for occupied spaces query (needs date parameter)
 $whereClause = '';
 $params = [':date' => $selectedDate];
 
@@ -37,9 +37,9 @@ if ($selectedArea) {
     $params[':area_id'] = $selectedArea;
 }
 
-// Total spaces in bookable areas (is_booking_lot = 1)
-$totalParams = [];
+// Build WHERE clause and params for total spaces query (no date needed)
 $totalWhere = '';
+$totalParams = [];
 if ($selectedArea) {
     $totalWhere = 'AND pl.parkingLot_ID = :area_id';
     $totalParams[':area_id'] = $selectedArea;
@@ -79,12 +79,15 @@ $availableSpaces = $totalSpaces - $occupiedSpaces;
 
 /* ==================== CHART DATA: Spaces Used by Area ==================== */
 // Get occupancy data for each parking area (for bar chart visualization)
+
+// Build dynamic WHERE clause for chart query
 $chartParams = [':date' => $selectedDate];
-$chartWhere = '';
+$chartConditions = ["pa.parkingLot_type = 'Student'"];
 if ($selectedArea) {
-    $chartWhere = 'WHERE pa.parkingLot_ID = :area_id';
+    $chartConditions[] = 'pa.parkingLot_ID = :area_id';
     $chartParams[':area_id'] = $selectedArea;
 }
+$chartWhere = 'WHERE ' . implode(' AND ', $chartConditions);
 
 // Query: For each area, count total spaces and occupied spaces (only Student parking areas)
 // LEFT JOIN ensures areas with no bookings still appear (occupied_count = 0)
@@ -98,7 +101,6 @@ $stmt = $db->prepare("
     LEFT JOIN Booking b ON ps.space_ID = b.space_ID 
         AND b.booking_date = :date
         AND b.booking_status IN ('confirmed', 'active')
-    WHERE pa.parkingLot_type = 'Student'
     $chartWhere
     GROUP BY pa.parkingLot_ID, pa.parkingLot_name
     ORDER BY pa.parkingLot_name

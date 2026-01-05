@@ -19,15 +19,14 @@ $db = getDB();
 $message = '';
 $messageType = '';
 
-// Auto-complete expired active bookings
+// Auto-complete expired active bookings - DISABLED (columns not in current database schema)
+/*
 $currentTime = date('Y-m-d H:i:s');
 $completeStmt = $db->prepare("
     UPDATE Booking 
-    SET booking_status = 'completed',
-        session_ended_at = actual_end_time
+    SET booking_status = 'completed'
     WHERE booking_status = 'active' 
     AND actual_end_time IS NOT NULL 
-    AND actual_end_time > '1000-01-01 00:00:00'
     AND actual_end_time < ?
 ");
 $completedCount = $completeStmt->execute([$currentTime]) ? $completeStmt->rowCount() : 0;
@@ -36,6 +35,7 @@ if ($completedCount > 0) {
     $message = "$completedCount parking session(s) automatically completed.";
     $messageType = 'success';
 }
+*/
 
 // Handle actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -434,8 +434,7 @@ renderHeader('View & Manage Bookings');
                             u.username,
                             v.license_plate as booked_plate,
                             v.vehicle_model,
-                            v.vehicle_type,
-                            b.actual_plate_number
+                            v.vehicle_type
                         FROM Booking b
                         JOIN ParkingSpace ps ON b.space_ID = ps.space_ID
                         JOIN ParkingLot pl ON ps.parkingLot_ID = pl.parkingLot_ID
