@@ -33,6 +33,8 @@ CREATE TABLE User (
     phone_number VARCHAR(20) NULL,
     password VARCHAR(255) NOT NULL,
     user_type VARCHAR(20) NOT NULL,
+    reset_token_hash VARCHAR(255) NULL,
+    reset_expires_at DATETIME NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -48,6 +50,7 @@ CREATE TABLE Vehicle (
     license_plate VARCHAR(15) NOT NULL,
     grant_document LONGBLOB NULL,
     grant_status VARCHAR(20) NOT NULL,
+    rejection_reason TEXT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_ID) REFERENCES User(user_ID) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

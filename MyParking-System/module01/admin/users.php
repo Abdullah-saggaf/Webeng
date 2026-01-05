@@ -28,6 +28,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new Exception('Invalid role selected.');
             }
 
+            // Prevent duplicate User IDs with a clear error
+            if (getUserById($userId)) {
+                throw new Exception('This User ID already exists. Please choose a different ID.');
+            }
+
             createUser($userId, $username, $email, $phone, $password, $role);
             $message = 'User created successfully.';
         } elseif ($action === 'update') {
