@@ -53,8 +53,19 @@ try {
     </body></html>');
 }
 
-// Build verification URL using QR_BASE_URL constant
-$verification_url = QR_BASE_URL . '/module04/summon_qr_view.php?code=' . urlencode($qr_code);
+// Build verification URL - detect LAN IP for phone scanning
+function getPublicBaseUrl() {
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    if ($host === 'localhost' || $host === '127.0.0.1') {
+        $ip = gethostbyname(gethostname());
+        if (!empty($ip) && $ip !== '127.0.0.1' && filter_var($ip, FILTER_VALIDATE_IP)) {
+            $host = $ip;
+        }
+    }
+    return 'http://' . $host . '/Webeng/MyParking-System';
+}
+
+$verification_url = getPublicBaseUrl() . '/module04/summon_qr_view.php?code=' . urlencode($qr_code);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -263,11 +274,15 @@ $verification_url = QR_BASE_URL . '/module04/summon_qr_view.php?code=' . urlenco
             </div>
             <div class="info-item">
                 <div class="info-label">License Plate</div>
-                <div class="info-value"><?php echo htmlspecialchars($ticket['license_plate']); ?></div>
+                <div class="info-value">
+                    <?php echo !empty($ticket['license_plate']) ? htmlspecialchars($ticket['license_plate']) : '<em style="color: #9ca3af;">Not Registered</em>'; ?>
+                </div>
             </div>
             <div class="info-item">
                 <div class="info-label">Vehicle Type</div>
-                <div class="info-value"><?php echo htmlspecialchars($ticket['vehicle_type']); ?></div>
+                <div class="info-value">
+                    <?php echo !empty($ticket['vehicle_type']) ? htmlspecialchars($ticket['vehicle_type']) : '<em style="color: #9ca3af;">N/A</em>'; ?>
+                </div>
             </div>
             <div class="info-item">
                 <div class="info-label">Issued Date</div>

@@ -370,7 +370,7 @@ try {
                 </div>
                 <div class="info-item">
                     <div class="info-label">Issue Date</div>
-                    <div class="info-value"><?php echo date('d M Y', strtotime($ticket['issued_at'])); ?></div>
+                    <div class="info-value"><?php echo date('M d, Y h:i A', strtotime($ticket['issued_at'])); ?></div>
                 </div>
                 <div class="info-item">
                     <div class="info-label">Status</div>

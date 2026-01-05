@@ -164,7 +164,7 @@ renderHeader('My Summons');
                                         data-violation="<?php echo htmlspecialchars($ticket['violation_type']); ?>"
                                         data-points="<?php echo htmlspecialchars($ticket['violation_points']); ?>"
                                         data-status="<?php echo htmlspecialchars($ticket['ticket_status']); ?>"
-                                        data-issued="<?php echo date('M d, Y H:i', strtotime($ticket['issued_at'])); ?>"
+                                        data-issued="<?php echo date('M d, Y h:i A', strtotime($ticket['issued_at'])); ?>"
                                         data-scan-url="<?php echo htmlspecialchars($scanUrl); ?>"
                                         style="padding: 8px 16px; background: #059669; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; transition: background 0.2s ease;"
                                         onmouseover="this.style.background='#047857';"
