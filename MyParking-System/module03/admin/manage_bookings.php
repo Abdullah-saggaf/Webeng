@@ -481,7 +481,7 @@ renderHeader('View & Manage Bookings');
                             <div><?php echo htmlspecialchars($booking['vehicle_model']); ?></div>
                             <div style="font-size: 11px; color: #6b7280;">
                                 <?php 
-                                echo htmlspecialchars($booking['actual_plate_number'] ?: $booking['booked_plate']); 
+                                echo htmlspecialchars($booking['booked_plate']); 
                                 ?>
                             </div>
                         </td>
@@ -697,7 +697,7 @@ renderHeader('View & Manage Bookings');
                     u.user_ID,
                     ps.space_number,
                     pl.parkingLot_name,
-                    b.actual_plate_number,
+                    v.license_plate,
                     v.vehicle_type,
                     v.vehicle_model
                 FROM Booking b
@@ -746,7 +746,7 @@ renderHeader('View & Manage Bookings');
                     
                     <div class="session-detail">
                         <span class="session-label">Vehicle</span>
-                        <span class="session-value"><?php echo htmlspecialchars($session['actual_plate_number']); ?></span>
+                        <span class="session-value"><?php echo htmlspecialchars($session['license_plate']); ?></span>
                     </div>
                     
                     <div class="session-detail">
@@ -865,7 +865,7 @@ function viewBookingDetails(booking) {
             <div><strong>Area:</strong> ${booking.parkingLot_name}</div>
             <div><strong>Date:</strong> ${booking.booking_date}</div>
             <div><strong>Reserved Time:</strong> ${booking.start_time} - ${booking.end_time}</div>
-            <div><strong>Vehicle Plate:</strong> ${booking.actual_plate_number || booking.booked_plate}</div>
+            <div><strong>Vehicle Plate:</strong> ${booking.booked_plate}</div>
             <div><strong>Status:</strong> <span class="status-badge status-${booking.booking_status}">${booking.booking_status.toUpperCase()}</span></div>
             ${booking.actual_start_time ? `<div><strong>Session Start Time:</strong> ${new Date(booking.actual_start_time).toLocaleString('en-MY', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</div>` : ''}
             ${booking.actual_start_time && booking.actual_end_time ? `<div><strong>Session Duration:</strong> ${sessionDuration}</div>` : ''}
