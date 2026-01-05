@@ -146,7 +146,8 @@ renderHeader('Parking Availability');
     
     <!-- ==================== SUMMARY CARDS ==================== -->
     <!-- Display 3 key metrics: Total, Occupied, Available spaces -->
-    <div class="summary-grid">\n        <!-- Card 1: Total Spaces -->
+    <div class="summary-grid">
+        <!-- Card 1: Total Spaces -->
         <div class="summary-card">
             <div class="card-icon"><i class="fas fa-parking"></i></div>
             <div class="card-content">
@@ -185,7 +186,8 @@ renderHeader('Parking Availability');
     </div>
     
     <!-- ==================== INFO BOX ==================== -->
-    <!-- Additional information about the data -->\n    <div class="info-box">
+    <!-- Additional information about the data -->
+    <div class="info-box">
         <h4><i class="fas fa-info-circle"></i> Information</h4>
         <p><strong>Date:</strong> <?php echo date('F d, Y', strtotime($selectedDate)); ?></p>
         <p><strong>Last Updated:</strong> <?php echo date('g:i A'); ?></p>

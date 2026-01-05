@@ -80,24 +80,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     elseif ($action === 'cancel' && $bookingId) {
         try {
-            // Cancel booking (for pending or confirmed status)
+            // First verify booking belongs to user
             $stmt = $db->prepare("
-                UPDATE Booking b
+                SELECT b.booking_ID 
+                FROM Booking b
                 JOIN Vehicle v ON b.vehicle_ID = v.vehicle_ID
-                SET b.booking_status = 'cancelled' 
                 WHERE b.booking_ID = ? 
-                AND v.user_ID = ? 
-                AND b.booking_status IN ('pending', 'confirmed')
+                AND v.user_ID = ?
             ");
             $stmt->execute([$bookingId, $userId]);
+            $booking = $stmt->fetch();
             
-            if ($stmt->rowCount() > 0) {
-                $message = 'Booking cancelled successfully.';
-                $messageType = 'success';
-            } else {
-                $message = 'Cannot cancel active or completed bookings.';
-                $messageType = 'error';
+            if (!$booking) {
+                throw new Exception('Booking not found or you do not have permission to cancel it.');
             }
+            
+            // Delete booking from database
+            $stmt = $db->prepare("DELETE FROM Booking WHERE booking_ID = ?");
+            $stmt->execute([$bookingId]);
+            
+            $message = 'Booking cancelled and deleted successfully.';
+            $messageType = 'success';
             
         } catch (Exception $e) {
             $message = 'Error: ' . $e->getMessage();
@@ -134,34 +137,90 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $messageType = 'error';
         }
     }
+    
+    elseif ($action === 'update' && $bookingId) {
+        try {
+            $newDate = $_POST['booking_date'] ?? '';
+            $newStartTime = $_POST['start_time'] ?? '';
+            $newEndTime = $_POST['end_time'] ?? '';
+            $newVehicleId = (int)($_POST['vehicle_id'] ?? 0);
+            
+            if (!$newDate || !$newStartTime || !$newEndTime || !$newVehicleId) {
+                throw new Exception('All fields are required.');
+            }
+            
+            // Validate vehicle belongs to user and is approved
+            $stmt = $db->prepare("SELECT vehicle_ID FROM Vehicle WHERE vehicle_ID = ? AND user_ID = ? AND grant_status = 'Approved'");
+            $stmt->execute([$newVehicleId, $userId]);
+            if (!$stmt->fetch()) {
+                throw new Exception('Please select a valid approved vehicle.');
+            }
+            
+            // Validate time range
+            if (strtotime($newStartTime) >= strtotime($newEndTime)) {
+                throw new Exception('End time must be after start time.');
+            }
+            
+            // Update booking (only if confirmed)
+            $stmt = $db->prepare("
+                UPDATE Booking b
+                JOIN Vehicle v ON b.vehicle_ID = v.vehicle_ID
+                SET b.booking_date = ?,
+                    b.start_time = ?,
+                    b.end_time = ?,
+                    b.vehicle_ID = ?
+                WHERE b.booking_ID = ? 
+                AND v.user_ID = ? 
+                AND b.booking_status = 'confirmed'
+            ");
+            $stmt->execute([$newDate, $newStartTime, $newEndTime, $newVehicleId, $bookingId, $userId]);
+            
+            if ($stmt->rowCount() > 0) {
+                $message = 'Booking updated successfully.';
+                $messageType = 'success';
+            } else {
+                $message = 'Cannot update active or completed bookings.';
+                $messageType = 'error';
+            }
+            
+        } catch (Exception $e) {
+            $message = 'Error: ' . $e->getMessage();
+            $messageType = 'error';
+        }
+    }
 }
 
-// Get user's bookings
+// Get user's bookings (exclude cancelled bookings)
 $stmt = $db->prepare("
     SELECT 
         b.*,
         ps.space_number,
-        ps.qr_code_value,
         pl.parkingLot_name,
         pl.parkingLot_type,
-        v.license_plate
+        v.license_plate,
+        v.vehicle_model,
+        v.vehicle_type
     FROM Booking b
     JOIN ParkingSpace ps ON b.space_ID = ps.space_ID
     JOIN ParkingLot pl ON ps.parkingLot_ID = pl.parkingLot_ID
     JOIN Vehicle v ON b.vehicle_ID = v.vehicle_ID
-    WHERE v.user_ID = ?
+    WHERE v.user_ID = ? AND b.booking_status != 'cancelled'
     ORDER BY b.booking_date DESC, b.created_at DESC
     LIMIT 50
 ");
 $stmt->execute([$userId]);
 $bookings = $stmt->fetchAll();
 
+// Get user's vehicles for edit modal
+$vehiclesStmt = $db->prepare("SELECT vehicle_ID, vehicle_type, vehicle_model, license_plate, grant_status FROM Vehicle WHERE user_ID = ? ORDER BY grant_status DESC, created_at DESC");
+$vehiclesStmt->execute([$userId]);
+$userVehicles = $vehiclesStmt->fetchAll();
+
 require_once __DIR__ . '/../../layout.php';
 renderHeader('My Bookings');
 ?>
 
 <link rel="stylesheet" href="<?php echo APP_BASE_PATH; ?>/module03/student/my_bookings.css?v=<?php echo time(); ?>">
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 
 <div class="bookings-container">
     <h2>My Bookings</h2>
@@ -188,7 +247,6 @@ renderHeader('My Bookings');
             $statusClass = strtolower($booking['booking_status']);
             $isToday = $booking['booking_date'] === date('Y-m-d');
             $isPast = $booking['booking_date'] < date('Y-m-d');
-            $isPending = $booking['booking_status'] === 'pending';
         ?>
         <div class="booking-card <?php echo $statusClass; ?>">
             <div class="booking-header">
@@ -208,6 +266,10 @@ renderHeader('My Bookings');
             </div>
             
             <div class="booking-details">
+                <div class="detail-row">
+                    <i class="fas fa-car"></i>
+                    <span><?php echo htmlspecialchars($booking['vehicle_model']); ?> - <?php echo htmlspecialchars($booking['license_plate']); ?></span>
+                </div>
                 <div class="detail-row">
                     <i class="fas fa-map-marker-alt"></i>
                     <span><?php echo htmlspecialchars($booking['parkingLot_name']); ?></span>
@@ -238,76 +300,30 @@ renderHeader('My Bookings');
                 </div>
             </div>
             
-            <?php if ($isPending): ?>
-            <div class="pending-section">
-                <i class="fas fa-hourglass-half"></i>
-                <p class="pending-message">Waiting for admin confirmation</p>
-            </div>
-            <?php elseif ($booking['booking_status'] === 'active' || ($booking['booking_status'] === 'confirmed' && $isToday)): ?>
-            <div class="qr-section">
-                <div class="qr-code" id="qr-<?php echo $booking['booking_ID']; ?>"></div>
-                <p class="qr-label">Scan to Verify</p>
-                <script>
-                new QRCode(document.getElementById("qr-<?php echo $booking['booking_ID']; ?>"), {
-                    text: "<?php echo htmlspecialchars($booking['qr_code_value']); ?>",
-                    width: 200,
-                    height: 200,
-                    correctLevel: QRCode.CorrectLevel.H
-                });
-                </script>
-            </div>
-            <?php endif; ?>
-            
             <div class="booking-actions">
-                <?php if ($isPending): ?>
-                <form method="POST" style="display: inline; width: 100%;">
-                    <input type="hidden" name="action" value="cancel">
-                    <input type="hidden" name="booking_id" value="<?php echo $booking['booking_ID']; ?>">
-                    <button type="submit" class="btn-cancel-pending" onclick="return confirm('Cancel this pending booking request?')">
-                        <i class="fas fa-times-circle"></i> Cancel Request
+                <?php if ($booking['booking_status'] === 'confirmed'): ?>
+                    <a href="<?php echo APP_BASE_PATH; ?>/module03/parking_session.php?booking_id=<?php echo $booking['booking_ID']; ?>" 
+                       class="btn-edit" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-play-circle"></i> Start Session
+                    </a>
+                    <button type="button" class="btn-edit" onclick='openEditModal(<?php echo json_encode($booking); ?>)'>
+                        <i class="fas fa-edit"></i> Edit
                     </button>
-                </form>
-                <?php elseif ($booking['booking_status'] === 'confirmed' && !$isPast): ?>
-                    <form method="POST" style="display: inline;">
-                        <input type="hidden" name="action" value="activate">
-                        <input type="hidden" name="booking_id" value="<?php echo $booking['booking_ID']; ?>">
-                        <button type="submit" class="btn-activate">
-                            <i class="fas fa-play"></i> Activate
-                        </button>
-                    </form>
                     <form method="POST" style="display: inline;">
                         <input type="hidden" name="action" value="cancel">
                         <input type="hidden" name="booking_id" value="<?php echo $booking['booking_ID']; ?>">
-                        <button type="submit" class="btn-cancel" onclick="return confirm('Cancel this booking?')">
+                        <button type="submit" class="btn-cancel" onclick="return confirm('Are you sure you want to cancel and delete this booking? This action cannot be undone.')">
                             <i class="fas fa-times"></i> Cancel
                         </button>
                     </form>
                 <?php elseif ($booking['booking_status'] === 'active'): ?>
-                    <form method="POST" style="display: inline;">
-                        <input type="hidden" name="action" value="complete">
-                        <input type="hidden" name="booking_id" value="<?php echo $booking['booking_ID']; ?>">
-                        <button type="submit" class="btn-complete" onclick="return confirm('Complete this booking?')">
-                            <i class="fas fa-check"></i> Complete
-                        </button>
-                    </form>
-                <?php elseif ($booking['booking_status'] === 'confirmed' && !$isPast): ?>
-                    <form method="POST" style="display: inline;">
-                        <input type="hidden" name="action" value="cancel">
-                        <input type="hidden" name="booking_id" value="<?php echo $booking['booking_ID']; ?>">
-                        <button type="submit" class="btn-cancel" onclick="return confirm('Cancel this booking?')">
-                            <i class="fas fa-times"></i> Cancel
-                        </button>
-                    </form>
-                <?php endif; ?>
-                
-                <?php if (in_array($booking['booking_status'], ['confirmed', 'active', 'completed', 'cancelled'])): ?>
-                    <form method="POST" style="display: inline;">
-                        <input type="hidden" name="action" value="delete">
-                        <input type="hidden" name="booking_id" value="<?php echo $booking['booking_ID']; ?>">
-                        <button type="submit" class="btn-delete" onclick="return confirm('Permanently delete this booking? This action cannot be undone.')">
-                            <i class="fas fa-trash"></i> Delete
-                        </button>
-                    </form>
+                    <a href="<?php echo APP_BASE_PATH; ?>/module03/parking_session.php?booking_id=<?php echo $booking['booking_ID']; ?>" 
+                       class="btn-edit" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; background: #10b981;">
+                        <i class="fas fa-eye"></i> View Session
+                    </a>
+                    <p style="color: #10b981; font-weight: 500; margin: 0;">
+                        <i class="fas fa-circle" style="font-size: 8px;"></i> Active
+                    </p>
                 <?php endif; ?>
             </div>
         </div>
@@ -316,5 +332,199 @@ renderHeader('My Bookings');
     
     <?php endif; ?>
 </div>
+
+<!-- Edit Booking Modal -->
+<div id="editModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h3><i class="fas fa-edit"></i> Edit Booking</h3>
+            <button onclick="closeEditModal()" class="close-btn">×</button>
+        </div>
+        <form method="POST">
+            <input type="hidden" name="action" value="update">
+            <input type="hidden" name="booking_id" id="edit_booking_id">
+            
+            <div class="modal-body" style="padding: 20px;">
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Space</label>
+                    <input type="text" id="edit_space" readonly style="background: #f3f4f6; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; width: 100%;">
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Vehicle <span style="color: #ef4444;">*</span></label>
+                    <select name="vehicle_id" id="edit_vehicle_id" required style="padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; width: 100%;">
+                        <option value="">-- Select Vehicle --</option>
+                        <?php foreach ($userVehicles as $vehicle): ?>
+                            <option value="<?php echo $vehicle['vehicle_ID']; ?>" 
+                                    <?php echo $vehicle['grant_status'] !== 'Approved' ? 'disabled' : ''; ?>>
+                                <?php echo htmlspecialchars($vehicle['vehicle_model']); ?> - 
+                                <?php echo htmlspecialchars($vehicle['license_plate']); ?>
+                                <?php if ($vehicle['grant_status'] === 'Approved'): ?>
+                                    ✓
+                                <?php else: ?>
+                                    (<?php echo $vehicle['grant_status']; ?>)
+                                <?php endif; ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Booking Date <span style="color: #ef4444;">*</span></label>
+                    <input type="date" name="booking_date" id="edit_date" required style="padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; width: 100%;" min="<?php echo date('Y-m-d'); ?>">
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Start Time <span style="color: #ef4444;">*</span></label>
+                    <input type="time" name="start_time" id="edit_start_time" required style="padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; width: 100%;">
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">End Time <span style="color: #ef4444;">*</span></label>
+                    <input type="time" name="end_time" id="edit_end_time" required style="padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; width: 100%;">
+                </div>
+            </div>
+            
+            <div class="modal-actions" style="padding: 15px 20px; background: #f9fafb; display: flex; gap: 10px; justify-content: flex-end;">
+                <button type="button" onclick="closeEditModal()" style="padding: 8px 16px; background: #e5e7eb; border: none; border-radius: 6px; cursor: pointer;">
+                    Cancel
+                </button>
+                <button type="submit" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
+                    <i class="fas fa-save"></i> Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openEditModal(booking) {
+    document.getElementById('edit_booking_id').value = booking.booking_ID;
+    document.getElementById('edit_space').value = booking.space_number;
+    document.getElementById('edit_vehicle_id').value = booking.vehicle_ID;
+    document.getElementById('edit_date').value = booking.booking_date;
+    document.getElementById('edit_start_time').value = booking.start_time;
+    document.getElementById('edit_end_time').value = booking.end_time;
+    document.getElementById('editModal').style.display = 'flex';
+}
+
+function closeEditModal() {
+    document.getElementById('editModal').style.display = 'none';
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('editModal');
+    if (event.target === modal) {
+        closeEditModal();
+    }
+}
+</script>
+
+<style>
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    width: 90%;
+    max-width: 500px;
+}
+
+.modal-header {
+    padding: 20px;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #1f2937;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.close-btn:hover {
+    color: #1f2937;
+}
+
+.btn-edit {
+    background: #f59e0b;
+    color: white;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.btn-edit:hover {
+    background: #d97706;
+}
+
+.btn-cancel {
+    background: #ef4444;
+    color: white;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.btn-cancel:hover {
+    background: #dc2626;
+}
+
+.booking-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.booking-actions form {
+    flex: 1;
+}
+
+.booking-actions button {
+    width: 100%;
+}
+</style>
 
 <?php renderFooter(); ?>

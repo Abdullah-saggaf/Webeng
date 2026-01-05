@@ -1106,6 +1106,9 @@ function renderHeader($title = 'MyParking') {
                     <a href="<?php echo APP_BASE_PATH . '/module02/admin/manage_parking_spaces.php'; ?>" class="<?php echo isActive('manage_parking_spaces.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-th"></i> Parking Spaces
                     </a>
+                    <a href="<?php echo APP_BASE_PATH . '/module03/admin/manage_bookings.php'; ?>" class="<?php echo isActive('manage_bookings.php', $currentPage, $currentPath); ?>">
+                        <i class="fas fa-calendar-check"></i> View & Manage Bookings
+                    </a>
                 <?php elseif ($role === 'safety_staff'): ?>
                     <a href="<?php echo htmlspecialchars(APP_BASE_PATH . '/staff.php'); ?>" class="<?php echo isActive('staff.php', $currentPage, $currentPath); ?>">
                         <i class="fas fa-home"></i> Dashboard

@@ -18,19 +18,18 @@ $messageType = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'book') {
     $spaceId = (int)($_POST['space_id'] ?? 0);
     $bookingDate = $_POST['booking_date'] ?? date('Y-m-d');
+    $vehicleId = (int)($_POST['vehicle_id'] ?? 0);
     $userId = $_SESSION['user_id'];
     
     try {
-        // Get user's approved vehicle
-        $stmt = $db->prepare("SELECT vehicle_ID FROM Vehicle WHERE user_ID = ? AND grant_status = 'approved' LIMIT 1");
-        $stmt->execute([$userId]);
+        // Validate selected vehicle belongs to user and is approved
+        $stmt = $db->prepare("SELECT vehicle_ID FROM Vehicle WHERE vehicle_ID = ? AND user_ID = ? AND grant_status = 'approved'");
+        $stmt->execute([$vehicleId, $userId]);
         $vehicle = $stmt->fetch();
         
         if (!$vehicle) {
-            throw new Exception('You must have an approved vehicle to make a booking.');
+            throw new Exception('Please select a valid approved vehicle.');
         }
-        
-        $vehicleId = $vehicle['vehicle_ID'];
         
         // Check if space is already booked for this date
         $stmt = $db->prepare("
@@ -54,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             JOIN Vehicle v ON b.vehicle_ID = v.vehicle_ID
             WHERE v.user_ID = ? 
             AND b.booking_date = ? 
-            AND b.booking_status IN ('pending', 'confirmed', 'active')
+            AND b.booking_status IN ('confirmed', 'active')
         ");
         $stmt->execute([$userId, $bookingDate]);
         $userBooking = $stmt->fetch()['cnt'];
@@ -63,34 +62,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             throw new Exception('You already have a booking for this date.');
         }
         
-        // Get space QR code for booking
-        $stmt = $db->prepare("SELECT qr_code_value FROM ParkingSpace WHERE space_ID = ?");
-        $stmt->execute([$spaceId]);
-        $spaceData = $stmt->fetch();
-        
         // Get time selection from user
-        $timeType = $_POST['time_type'] ?? 'all_day';
-        $startTime = '00:00:00';
-        $endTime = '23:59:59';
-        
-        if ($timeType === 'specific' && !empty($_POST['start_time']) && !empty($_POST['end_time'])) {
-            $startTime = $_POST['start_time'] . ':00';
-            $endTime = $_POST['end_time'] . ':00';
-            
-            // Validate time range
-            if (strtotime($startTime) >= strtotime($endTime)) {
-                throw new Exception('End time must be after start time.');
-            }
+        if (empty($_POST['start_time']) || empty($_POST['end_time'])) {
+            throw new Exception('Start time and end time are required.');
         }
         
-        // Create booking with pending status (waiting for admin confirmation)
-        $stmt = $db->prepare("
-            INSERT INTO Booking (vehicle_ID, space_ID, booking_date, start_time, end_time, booking_status, qr_code_value) 
-            VALUES (?, ?, ?, ?, ?, 'pending', ?)
-        ");
-        $stmt->execute([$vehicleId, $spaceId, $bookingDate, $startTime, $endTime, $spaceData['qr_code_value']]);
+        $startTime = $_POST['start_time'] . ':00';
+        $endTime = $_POST['end_time'] . ':00';
         
-        $message = 'Booking request submitted successfully! Waiting for admin confirmation.';
+        // Validate time range
+        if (strtotime($startTime) >= strtotime($endTime)) {
+            throw new Exception('End time must be after start time.');
+        }
+        
+        // Create booking with confirmed status
+        $stmt = $db->prepare("
+            INSERT INTO Booking (vehicle_ID, space_ID, booking_date, start_time, end_time, booking_status) 
+            VALUES (?, ?, ?, ?, ?, 'confirmed')
+        ");
+        $stmt->execute([$vehicleId, $spaceId, $bookingDate, $startTime, $endTime]);
+        
+        $message = 'Booking confirmed successfully!';
         $messageType = 'success';
         
     } catch (Exception $e) {
@@ -99,12 +91,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
+// Get user's registered vehicles
+$userId = $_SESSION['user_id'];
+$vehiclesStmt = $db->prepare("SELECT vehicle_ID, vehicle_type, vehicle_model, license_plate, grant_status FROM Vehicle WHERE user_ID = ? ORDER BY grant_status DESC, created_at DESC");
+$vehiclesStmt->execute([$userId]);
+$userVehicles = $vehiclesStmt->fetchAll();
+
 // Get filters
 $selectedDate = $_GET['date'] ?? date('Y-m-d');
 $selectedArea = (int)($_GET['area_id'] ?? 0);
 
-// Get all bookable areas
-$areas = $db->query("SELECT * FROM ParkingLot WHERE is_booking_lot = 1 ORDER BY parkingLot_name")->fetchAll();
+// Get all bookable areas (Student parking only)
+$areas = $db->query("SELECT * FROM ParkingLot WHERE is_booking_lot = 1 AND parkingLot_type = 'Student' ORDER BY parkingLot_name")->fetchAll();
 
 // Get available spaces
 $whereClause = '';
@@ -130,7 +128,7 @@ $stmt = $db->prepare("
     LEFT JOIN Booking b ON ps.space_ID = b.space_ID 
         AND b.booking_date = :date
         AND b.booking_status IN ('confirmed', 'active')
-    WHERE pl.is_booking_lot = 1 $whereClause
+    WHERE pl.is_booking_lot = 1 AND pl.parkingLot_type = 'Student' $whereClause
     ORDER BY pl.parkingLot_name, ps.space_number
 ");
 $stmt->execute($params);
@@ -234,30 +232,48 @@ renderHeader('Parking Booking');
                     <p><strong>Date:</strong> <?php echo date('F d, Y', strtotime($selectedDate)); ?></p>
                 </div>
                 
-                <div class="time-selection">
-                    <label class="time-option">
-                        <input type="radio" name="time_type" value="all_day" checked onchange="toggleTimeInputs()">
-                        <span class="option-label">
-                            <i class="fas fa-clock"></i> All Day (00:00 - 23:59)
-                        </span>
+                <div class="form-group" style="margin: 20px 0;">
+                    <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">
+                        <i class="fas fa-car"></i> Select Vehicle: <span style="color: #ef4444;">*</span>
                     </label>
-                    
-                    <label class="time-option">
-                        <input type="radio" name="time_type" value="specific" onchange="toggleTimeInputs()">
-                        <span class="option-label">
-                            <i class="fas fa-stopwatch"></i> Specific Time
-                        </span>
-                    </label>
+                    <select name="vehicle_id" id="vehicle_select" required style="width: 100%; padding: 10px; border: 2px solid #d1d5db; border-radius: 8px; font-size: 15px;">
+                        <option value="">-- Choose a vehicle --</option>
+                        <?php foreach ($userVehicles as $vehicle): ?>
+                            <option value="<?php echo $vehicle['vehicle_ID']; ?>" 
+                                    data-plate="<?php echo htmlspecialchars($vehicle['license_plate']); ?>"
+                                    <?php echo $vehicle['grant_status'] !== 'Approved' ? 'disabled' : ''; ?>>
+                                <?php echo htmlspecialchars($vehicle['vehicle_model']); ?> - 
+                                <?php echo htmlspecialchars($vehicle['license_plate']); ?>
+                                <?php if ($vehicle['grant_status'] === 'Approved'): ?>
+                                    ✓
+                                <?php else: ?>
+                                    (<?php echo $vehicle['grant_status']; ?>)
+                                <?php endif; ?>
+                            </option>
+                        <?php endforeach; ?>
+                        <?php if (empty($userVehicles)): ?>
+                            <option value="" disabled>No vehicles registered</option>
+                        <?php endif; ?>
+                    </select>
+                    <?php if (empty($userVehicles)): ?>
+                        <p style="color: #ef4444; font-size: 13px; margin-top: 5px;">
+                            <i class="fas fa-exclamation-circle"></i> Please register a vehicle first.
+                        </p>
+                    <?php endif; ?>
                 </div>
                 
-                <div id="specificTimeInputs" class="specific-time-inputs" style="display: none;">
+                <div class="time-selection">
+                    <h4 style="margin: 10px 0; color: #374151;"><i class="fas fa-clock"></i> Select Time</h4>
+                </div>
+                
+                <div class="specific-time-inputs">
                     <div class="time-input-group">
-                        <label>Start Time:</label>
-                        <input type="time" name="start_time" id="start_time">
+                        <label>Start Time: <span style="color: #ef4444;">*</span></label>
+                        <input type="time" name="start_time" id="start_time" required>
                     </div>
                     <div class="time-input-group">
-                        <label>End Time:</label>
-                        <input type="time" name="end_time" id="end_time">
+                        <label>End Time: <span style="color: #ef4444;">*</span></label>
+                        <input type="time" name="end_time" id="end_time" required>
                     </div>
                 </div>
             </div>
@@ -281,24 +297,6 @@ function openBookingModal(spaceId, spaceNumber, parkingArea) {
 function closeBookingModal() {
     document.getElementById('bookingModal').style.display = 'none';
     document.getElementById('bookingForm').reset();
-    toggleTimeInputs();
-}
-
-function toggleTimeInputs() {
-    const timeType = document.querySelector('input[name="time_type"]:checked').value;
-    const specificInputs = document.getElementById('specificTimeInputs');
-    const startTime = document.getElementById('start_time');
-    const endTime = document.getElementById('end_time');
-    
-    if (timeType === 'specific') {
-        specificInputs.style.display = 'grid';
-        startTime.required = true;
-        endTime.required = true;
-    } else {
-        specificInputs.style.display = 'none';
-        startTime.required = false;
-        endTime.required = false;
-    }
 }
 
 window.onclick = function(event) {

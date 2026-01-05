@@ -127,35 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     
-    /* ----- ACTION: Close Spaces for Event/Maintenance ----- */
-    elseif ($action === 'close_spaces') {
-        $id = (int)($_POST['area_id'] ?? 0);
-        $closedSpaces = (int)($_POST['closed_spaces'] ?? 0); // Number of spaces to temporarily close
-        
-        if ($id && $closedSpaces >= 0) {
-            // VALIDATION: Get area capacity to ensure closed_spaces doesn't exceed capacity
-            $stmt = $db->prepare("SELECT capacity FROM ParkingLot WHERE parkingLot_ID=?");
-            $stmt->execute([$id]);
-            $area = $stmt->fetch();
-            
-            // BUSINESS RULE: Cannot close more spaces than total capacity
-            if ($closedSpaces > $area['capacity']) {
-                $message = "Cannot close more spaces than the area capacity!";
-                $messageType = 'error';
-            } else {
-                try {
-                    // Update closed_spaces field (reduces available capacity temporarily)
-                    $stmt = $db->prepare("UPDATE ParkingLot SET closed_spaces=? WHERE parkingLot_ID=?");
-                    $stmt->execute([$closedSpaces, $id]);
-                    $message = "Successfully closed $closedSpaces space(s) for event/maintenance!";
-                    $messageType = 'success';
-                } catch (PDOException $e) {
-                    $message = "Error: " . $e->getMessage();
-                    $messageType = 'error';
-                }
-            }
-        }
-    }
+
 }
 /* ==================== END OF POST ACTIONS ==================== */
 
@@ -183,10 +155,9 @@ $totalRecords = $stmt->fetch()['total'];
 $totalPages = ceil($totalRecords / $limit); // Calculate total pages (round up)
 
 // Fetch parking areas for current page
-// COALESCE(closed_spaces, 0): Returns 0 if closed_spaces is NULL
 // ORDER BY parkingLot_name: Sort alphabetically by area name
 // LIMIT/OFFSET: Pagination (e.g., LIMIT 10 OFFSET 20 = rows 21-30)
-$sql = "SELECT parkingLot_ID, parkingLot_name, parkingLot_type, is_booking_lot, capacity, COALESCE(closed_spaces, 0) as closed_spaces FROM ParkingLot $whereClause ORDER BY parkingLot_name LIMIT $limit OFFSET $offset";
+$sql = "SELECT parkingLot_ID, parkingLot_name, parkingLot_type, is_booking_lot, capacity FROM ParkingLot $whereClause ORDER BY parkingLot_name LIMIT $limit OFFSET $offset";
 $stmt = $db->prepare($sql);
 $stmt->execute($params);
 $areas = $stmt->fetchAll(); // Fetch all results as associative array
@@ -286,16 +257,9 @@ renderHeader('Manage Parking Areas'); // Sets page title
                             <?php echo $area['is_booking_lot'] ? '<i class="fas fa-unlock"></i> Available' : '<i class="fas fa-lock"></i> Locked'; ?>
                         </span>
                     </td>
-                    <!-- Available capacity (total - closed spaces) -->
+                    <!-- Capacity -->
                     <td>
-                        <?php 
-                        $availableCapacity = $area['capacity'] - $area['closed_spaces'];
-                        echo $availableCapacity;
-                        // Show closed count if any spaces are closed
-                        if ($area['closed_spaces'] > 0) {
-                            echo ' <span style="color: #ef4444; font-size: 12px;">(' . $area['closed_spaces'] . ' closed)</span>';
-                        }
-                        ?>
+                        <?php echo $area['capacity']; ?>
                     </td>
                     <!-- Total spaces (child records count) -->
                     <td><?php echo $spaceCount; ?></td>
@@ -311,9 +275,6 @@ renderHeader('Manage Parking Areas'); // Sets page title
                                 <?php echo $area['is_booking_lot'] ? 'Lock' : 'Unlock'; ?>
                             </button>
                         </form>
-                        <!-- Close Spaces button (opens modal) -->
-                        <button onclick='openCloseSpacesModal(<?php echo json_encode($area); ?>)' 
-                                class="btn-lock"><i class="fas fa-ban"></i> Close Spaces</button>
                         <!-- Edit button (opens modal with current data) -->
                         <button onclick='openEditModal(<?php echo json_encode($area); ?>)' 
                                 class="btn-edit"><i class="fas fa-edit"></i> Edit</button>
@@ -446,43 +407,6 @@ renderHeader('Manage Parking Areas'); // Sets page title
     </div>
 </div>
 
-<!-- Close Spaces Modal -->
-<div id="closeSpacesModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3><i class="fas fa-ban"></i> Close Parking Spaces</h3>
-            <button onclick="closeModal('closeSpacesModal')" class="close-btn">×</button>
-        </div>
-        <form method="POST">
-            <input type="hidden" name="action" value="close_spaces">
-            <input type="hidden" name="area_id" id="close_area_id">
-            
-            <div class="form-group">
-                <label>Area Name</label>
-                <input type="text" id="close_area_name" readonly style="background: #f3f4f6;">
-            </div>
-            
-            <div class="form-group">
-                <label>Total Capacity</label>
-                <input type="text" id="close_capacity" readonly style="background: #f3f4f6;">
-            </div>
-            
-            <div class="form-group">
-                <label>Number of Spaces to Close <span class="required">*</span></label>
-                <input type="number" name="closed_spaces" id="close_spaces_input" min="0" required>
-                <small style="color: #6b7280; display: block; margin-top: 5px;">
-                    <i class="fas fa-info-circle"></i> Close spaces temporarily for events or maintenance. Enter 0 to reopen all spaces.
-                </small>
-            </div>
-            
-            <div class="modal-actions">
-                <button type="submit" class="btn-primary"><i class="fas fa-ban"></i> Update</button>
-                <button type="button" onclick="closeModal('closeSpacesModal')" class="btn-secondary">Cancel</button>
-            </div>
-        </form>
-    </div>
-</div>
-
 <script>
 /* ==================== JAVASCRIPT FUNCTIONS ==================== */
 
@@ -516,19 +440,6 @@ function openEditModal(area) {
     document.getElementById('edit_is_booking').checked = area.is_booking_lot == 1;
     document.getElementById('edit_capacity').value = area.capacity;
     document.getElementById('editModal').style.display = 'flex';
-}
-
-/**
- * Open Close Spaces modal and populate with area data
- * @param {Object} area - Parking area object
- */
-function openCloseSpacesModal(area) {
-    document.getElementById('close_area_id').value = area.parkingLot_ID;
-    document.getElementById('close_area_name').value = area.parkingLot_name;
-    document.getElementById('close_capacity').value = area.capacity;
-    document.getElementById('close_spaces_input').value = area.closed_spaces || 0;
-    document.getElementById('close_spaces_input').max = area.capacity; // Set max attribute
-    document.getElementById('closeSpacesModal').style.display = 'flex';
 }
 
 /**
