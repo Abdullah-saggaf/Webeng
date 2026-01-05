@@ -31,7 +31,7 @@ if (!$bookingId) {
 // Token-based authentication (for QR code access)
 if ($token) {
     // Verify token matches booking
-    $stmt = $db->prepare("SELECT booking_ID FROM Booking WHERE booking_ID = ? AND qr_token = ?");
+    $stmt = $db->prepare("SELECT booking_ID FROM Booking WHERE booking_ID = ? AND qr_code_value = ?");
     $stmt->execute([$bookingId, $token]);
     $validToken = $stmt->fetch();
     
@@ -104,10 +104,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $actualEndTime = date('Y-m-d H:i:s', strtotime('+1 hour'));
             } elseif ($durationType === '2hours') {
                 $actualEndTime = date('Y-m-d H:i:s', strtotime('+2 hours'));
-            } elseif ($durationType === 'custom' && $customDuration) {
-                $actualEndTime = date('Y-m-d H:i:s', strtotime("+{$customDuration} minutes"));
             } elseif ($durationType === 'specific' && $endTime) {
-                $actualEndTime = date('Y-m-d', strtotime($booking['booking_date'])) . ' ' . $endTime . ':00';
+                // Convert datetime-local format (YYYY-MM-DDTHH:MM) to MySQL format
+                $actualEndTime = date('Y-m-d H:i:s', strtotime(str_replace('T', ' ', $endTime)));
             } else {
                 throw new Exception('Please select a valid duration');
             }
@@ -123,16 +122,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 SET booking_status = 'active',
                     actual_start_time = ?,
                     actual_end_time = ?,
-                    actual_vehicle_id = ?,
-                    actual_plate_number = ?,
                     session_started_at = ?
                 WHERE booking_ID = ?
             ");
             $updateStmt->execute([
                 $startTime, 
                 $actualEndTime, 
-                $booking['vehicle_ID'], 
-                $booking['license_plate'], 
                 $startTime,
                 $bookingId
             ]);
@@ -198,7 +193,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Include layout if user is logged in, otherwise use minimal header
 if ($token) {
     // Minimal header for QR code access (no navigation)
-    $basePath = '/Webeng/MyParking-System';
+    $basePath = QR_BASE_URL;
     ?>
     <!DOCTYPE html>
     <html lang="en">
@@ -224,8 +219,6 @@ if ($token) {
     <?php
 }
 ?>
-
-<div class="parking-session-container">?>
 
 <div class="parking-session-container">
     <div class="session-card">
@@ -316,14 +309,6 @@ if ($token) {
                         </label>
                         
                         <label class="duration-option">
-                            <input type="radio" name="duration_type" value="custom" required>
-                            <span class="option-content">
-                                <i class="fas fa-edit"></i>
-                                <strong>Custom Duration</strong>
-                            </span>
-                        </label>
-                        
-                        <label class="duration-option">
                             <input type="radio" name="duration_type" value="specific" required>
                             <span class="option-content">
                                 <i class="fas fa-calendar-alt"></i>
@@ -333,13 +318,8 @@ if ($token) {
                     </div>
                 </div>
                 
-                <div class="form-group custom-duration-group" id="customDurationGroup" style="display: none;">
-                    <label>Enter Duration (minutes)</label>
-                    <input type="number" name="custom_duration" class="form-control" placeholder="e.g., 45" min="1" max="480">
-                </div>
-                
                 <div class="form-group specific-time-group" id="specificTimeGroup" style="display: none;">
-                    <label>Select End Time</label>
+                    <label>Select End Date and Time</label>
                     <input type="datetime-local" name="end_time" class="form-control" min="<?php echo date('Y-m-d\TH:i'); ?>">
                 </div>
                 
@@ -386,19 +366,13 @@ if ($token) {
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const durationRadios = document.querySelectorAll('input[name="duration_type"]');
-    const customDurationGroup = document.getElementById('customDurationGroup');
     const specificTimeGroup = document.getElementById('specificTimeGroup');
     
     durationRadios.forEach(radio => {
         radio.addEventListener('change', function() {
-            if (this.value === 'custom') {
-                customDurationGroup.style.display = 'block';
-                specificTimeGroup.style.display = 'none';
-            } else if (this.value === 'specific') {
+            if (this.value === 'specific') {
                 specificTimeGroup.style.display = 'block';
-                customDurationGroup.style.display = 'none';
             } else {
-                customDurationGroup.style.display = 'none';
                 specificTimeGroup.style.display = 'none';
             }
         });

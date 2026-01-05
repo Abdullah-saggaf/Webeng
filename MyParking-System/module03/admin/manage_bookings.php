@@ -19,15 +19,14 @@ $db = getDB();
 $message = '';
 $messageType = '';
 
-// Auto-complete expired active bookings
+// Auto-complete expired active bookings - DISABLED (columns not in current database schema)
+/*
 $currentTime = date('Y-m-d H:i:s');
 $completeStmt = $db->prepare("
     UPDATE Booking 
-    SET booking_status = 'completed',
-        session_ended_at = actual_end_time
+    SET booking_status = 'completed'
     WHERE booking_status = 'active' 
     AND actual_end_time IS NOT NULL 
-    AND actual_end_time > '1000-01-01 00:00:00'
     AND actual_end_time < ?
 ");
 $completedCount = $completeStmt->execute([$currentTime]) ? $completeStmt->rowCount() : 0;
@@ -36,6 +35,7 @@ if ($completedCount > 0) {
     $message = "$completedCount parking session(s) automatically completed.";
     $messageType = 'success';
 }
+*/
 
 // Handle actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -434,8 +434,7 @@ renderHeader('View & Manage Bookings');
                             u.username,
                             v.license_plate as booked_plate,
                             v.vehicle_model,
-                            v.vehicle_type,
-                            b.actual_plate_number
+                            v.vehicle_type
                         FROM Booking b
                         JOIN ParkingSpace ps ON b.space_ID = ps.space_ID
                         JOIN ParkingLot pl ON ps.parkingLot_ID = pl.parkingLot_ID
@@ -482,7 +481,7 @@ renderHeader('View & Manage Bookings');
                             <div><?php echo htmlspecialchars($booking['vehicle_model']); ?></div>
                             <div style="font-size: 11px; color: #6b7280;">
                                 <?php 
-                                echo htmlspecialchars($booking['actual_plate_number'] ?: $booking['booked_plate']); 
+                                echo htmlspecialchars($booking['booked_plate']); 
                                 ?>
                             </div>
                         </td>
@@ -633,8 +632,8 @@ renderHeader('View & Manage Bookings');
                                 b.start_time,
                                 b.end_time,
                                 b.booking_status,
-                                b.session_started_at,
-                                b.session_ended_at
+                                b.actual_start_time,
+                                b.actual_end_time
                             FROM Booking b
                             JOIN Vehicle v ON b.vehicle_ID = v.vehicle_ID
                             JOIN User u ON v.user_ID = u.user_ID
@@ -649,9 +648,9 @@ renderHeader('View & Manage Bookings');
                         
                         foreach ($history as $record):
                             $duration = '';
-                            if ($record['session_started_at'] && $record['session_ended_at']) {
-                                $start = new DateTime($record['session_started_at']);
-                                $end = new DateTime($record['session_ended_at']);
+                            if ($record['actual_start_time'] && $record['actual_end_time']) {
+                                $start = new DateTime($record['actual_start_time']);
+                                $end = new DateTime($record['actual_end_time']);
                                 $diff = $start->diff($end);
                                 $duration = $diff->format('%hh %im');
                             }
@@ -698,7 +697,7 @@ renderHeader('View & Manage Bookings');
                     u.user_ID,
                     ps.space_number,
                     pl.parkingLot_name,
-                    b.actual_plate_number,
+                    v.license_plate,
                     v.vehicle_type,
                     v.vehicle_model
                 FROM Booking b
@@ -747,7 +746,7 @@ renderHeader('View & Manage Bookings');
                     
                     <div class="session-detail">
                         <span class="session-label">Vehicle</span>
-                        <span class="session-value"><?php echo htmlspecialchars($session['actual_plate_number']); ?></span>
+                        <span class="session-value"><?php echo htmlspecialchars($session['license_plate']); ?></span>
                     </div>
                     
                     <div class="session-detail">
@@ -866,7 +865,7 @@ function viewBookingDetails(booking) {
             <div><strong>Area:</strong> ${booking.parkingLot_name}</div>
             <div><strong>Date:</strong> ${booking.booking_date}</div>
             <div><strong>Reserved Time:</strong> ${booking.start_time} - ${booking.end_time}</div>
-            <div><strong>Vehicle Plate:</strong> ${booking.actual_plate_number || booking.booked_plate}</div>
+            <div><strong>Vehicle Plate:</strong> ${booking.booked_plate}</div>
             <div><strong>Status:</strong> <span class="status-badge status-${booking.booking_status}">${booking.booking_status.toUpperCase()}</span></div>
             ${booking.actual_start_time ? `<div><strong>Session Start Time:</strong> ${new Date(booking.actual_start_time).toLocaleString('en-MY', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}</div>` : ''}
             ${booking.actual_start_time && booking.actual_end_time ? `<div><strong>Session Duration:</strong> ${sessionDuration}</div>` : ''}

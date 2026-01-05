@@ -342,8 +342,8 @@ renderHeader('Manage Parking Areas'); // Sets page title
             <div class="form-group">
                 <!-- Checkbox: If checked, area is bookable (is_booking_lot=1) -->
                 <label>
-                    <input type="checkbox" name="is_booking">
                     Bookable Area
+                    <input type="checkbox" name="is_booking">
                 </label>
             </div>
             
@@ -389,8 +389,8 @@ renderHeader('Manage Parking Areas'); // Sets page title
             
             <div class="form-group">
                 <label>
-                    <input type="checkbox" name="is_booking" id="edit_is_booking">
                     Bookable Area
+                    <input type="checkbox" name="is_booking" id="edit_is_booking">
                 </label>
             </div>
             
