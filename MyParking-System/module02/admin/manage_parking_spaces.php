@@ -227,7 +227,7 @@ if (!empty($spaces)) {
             JOIN Vehicle v ON b.vehicle_ID = v.vehicle_ID
             JOIN User u ON v.user_ID = u.user_ID
             WHERE b.space_ID IN ($placeholders) 
-            AND b.booking_status = 'pending'
+            AND b.booking_status IN ('pending', 'confirmed', 'active')
             AND b.booking_date >= CURDATE()
             ORDER BY b.booking_date ASC";
     $stmt = $db->prepare($sql);
@@ -386,18 +386,12 @@ renderHeader('Manage Parking Spaces'); // Sets page title
                                 <div class="pending-booking-item">
                                     <span class="booking-student"><i class="fas fa-user"></i> <?php echo htmlspecialchars($booking['student_name']); ?></span>
                                     <span class="booking-date"><i class="fas fa-calendar"></i> <?php echo date('M d, Y', strtotime($booking['booking_date'])); ?></span>
-                                    <form method="POST" style="display: inline;">
-                                        <input type="hidden" name="action" value="confirm_booking">
-                                        <input type="hidden" name="booking_id" value="<?php echo $booking['booking_ID']; ?>">
-                                        <button type="submit" class="btn-confirm" title="Confirm Booking">
-                                            <i class="fas fa-check"></i> Confirm
-                                        </button>
-                                    </form>
+                                    <span class="badge badge-<?php echo $booking['booking_status']; ?>"><?php echo strtoupper($booking['booking_status']); ?></span>
                                 </div>
                                 <?php endforeach; ?>
                             </div>
                         <?php else: ?>
-                            <span style="color: #999;">No pending bookings</span>
+                            <span style="color: #999;">No bookings</span>
                         <?php endif; ?>
                     </td>
                     <td><?php echo date('M d, Y', strtotime($space['created_at'])); ?></td>
