@@ -34,6 +34,43 @@ if (!defined('APP_BASE_PATH')) {
     }
 }
 
+// Full URL for QR codes (includes protocol and host for mobile access)
+if (!defined('QR_BASE_URL')) {
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host   = $_SERVER['HTTP_HOST'];
+    
+    // Replace localhost with actual network IP for mobile accessibility
+    if ($host === 'localhost' || $host === '127.0.0.1' || 
+        strpos($host, 'localhost:') === 0 || 
+        strpos($host, '127.0.0.1:') === 0 || 
+        strpos($host, '[::1]') === 0) {
+        
+        $serverIP = '127.0.0.1';
+        
+        // Detect actual network IP (exclude VirtualBox adapters)
+        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            $ipconfig = shell_exec('ipconfig');
+            
+            if (preg_match_all('/IPv4 Address[.\s]*:\s*([0-9.]+)/', $ipconfig, $matches)) {
+                foreach ($matches[1] as $ip) {
+                    if ($ip !== '127.0.0.1' && 
+                        !preg_match('/^192\.168\.56\./', $ip) && 
+                        !preg_match('/^169\.254\./', $ip)) {
+                        $serverIP = $ip;
+                        break;
+                    }
+                }
+            }
+        } else {
+            $serverIP = gethostbyname(gethostname());
+        }
+        
+        $host = $serverIP;
+    }
+    
+    define('QR_BASE_URL', $scheme . '://' . $host . APP_BASE_PATH);
+}
+
 function appUrl($path) {
     return APP_BASE_PATH . '/module01' . $path;
 }

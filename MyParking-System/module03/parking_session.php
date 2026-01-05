@@ -10,6 +10,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 require_once __DIR__ . '/../database/db_config.php';
+require_once __DIR__ . '/../module01/auth.php'; // Always load for constants
 
 $db = getDB();
 $message = '';
@@ -20,11 +21,7 @@ $bookingId = $_GET['booking_id'] ?? null;
 $token = $_GET['token'] ?? null;
 
 if (!$bookingId) {
-    if (defined('APP_BASE_PATH')) {
-        header("Location: " . APP_BASE_PATH . "/module03/student/my_bookings.php");
-    } else {
-        header("Location: /Webeng/MyParking-System/module03/student/my_bookings.php");
-    }
+    header("Location: " . APP_BASE_PATH . "/module03/student/my_bookings.php");
     exit();
 }
 
@@ -43,7 +40,6 @@ if ($token) {
     $userId = null; // Will be retrieved from booking
 } else {
     // Session-based authentication (for logged-in students)
-    require_once __DIR__ . '/../module01/auth.php';
     requireRole(['student']);
     $userId = $_SESSION['user_id'];
 }
@@ -193,7 +189,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Include layout if user is logged in, otherwise use minimal header
 if ($token) {
     // Minimal header for QR code access (no navigation)
-    $basePath = QR_BASE_URL;
     ?>
     <!DOCTYPE html>
     <html lang="en">
@@ -202,7 +197,7 @@ if ($token) {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Parking Session - MyParking System</title>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-        <link rel="stylesheet" href="<?php echo $basePath; ?>/module03/parking_session.css?v=<?php echo time(); ?>">
+        <link rel="stylesheet" href="<?php echo QR_BASE_URL; ?>/module03/parking_session.css?v=<?php echo time(); ?>">
         <style>
             * { box-sizing: border-box; }
             body { background: #f3f4f6; margin: 0; padding: 20px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }

@@ -438,7 +438,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <?php foreach ($bookings as $booking): ?>
         <?php if ($booking['booking_status'] === 'confirmed' && !empty($booking['qr_code_value'])): ?>
             new QRCode(document.getElementById('qrcode_<?php echo $booking['booking_ID']; ?>'), {
-                text: '<?php echo QR_BASE_URL; ?>/module03/parking_session.php?booking_id=<?php echo $booking['booking_ID']; ?>&token=<?php echo $booking['qr_code_value']; ?>',
+                text: '<?php echo htmlspecialchars(QR_BASE_URL, ENT_QUOTES); ?>/module03/parking_session.php?booking_id=<?php echo $booking['booking_ID']; ?>&token=<?php echo htmlspecialchars($booking['qr_code_value'], ENT_QUOTES); ?>',
                 width: 180,
                 height: 180,
                 colorDark: '#000000',

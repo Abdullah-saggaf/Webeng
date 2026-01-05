@@ -179,10 +179,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'created_by' => $_SESSION['user_id']
                     ]);
                     
-                    // Insert closure record into ParkingLog (using booking_ID = 0 for area-level events)
+                    // Insert closure record into ParkingLog (NULL booking_ID for administrative events)
                     $stmt = $db->prepare("
                         INSERT INTO ParkingLog (booking_ID, event_time, event_type, remarks)
-                        VALUES (0, NOW(), 'CLOSURE_START', ?)
+                        VALUES (NULL, NOW(), 'CLOSURE_START', ?)
                     ");
                     $stmt->execute([$closureData]);
                     
@@ -205,7 +205,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Mark closure as ended
                 $stmt = $db->prepare("
                     INSERT INTO ParkingLog (booking_ID, event_time, event_type, remarks)
-                    SELECT 0, NOW(), 'CLOSURE_END', CONCAT('Ended closure: ', log_ID)
+                    SELECT NULL, NOW(), 'CLOSURE_END', CONCAT('Ended closure: ', log_ID)
                     FROM ParkingLog WHERE log_ID = ?
                 ");
                 $stmt->execute([$logId]);
@@ -406,6 +406,29 @@ renderHeader('Manage Parking Areas'); // Sets page title
                     <td><?php echo $spaceCount; ?></td>
                     <!-- Action buttons column -->
                     <td class="actions">
+                        <!-- Close Spaces button -->
+                        <?php if (isset($activeClosures[$area['parkingLot_ID']])): 
+                            $closure = $activeClosures[$area['parkingLot_ID']];
+                        ?>
+                        <div style="margin-bottom: 8px; padding: 8px; background: #fef3c7; border-radius: 6px; font-size: 12px;">
+                            <strong>🚧 <?php echo $closure['spaces_closed']; ?> spaces closed</strong><br>
+                            <em><?php echo htmlspecialchars($closure['reason']); ?></em><br>
+                            Until: <?php echo date('M d, Y H:i', strtotime($closure['end'])); ?>
+                            <form method="POST" style="display: inline; margin-top: 4px;">
+                                <input type="hidden" name="action" value="end_closure">
+                                <input type="hidden" name="log_id" value="<?php echo $closure['log_id']; ?>">
+                                <button type="submit" class="btn-unlock" style="font-size: 11px; padding: 4px 8px;">
+                                    <i class="fas fa-check"></i> End Closure
+                                </button>
+                            </form>
+                        </div>
+                        <?php else: ?>
+                        <button onclick='openCloseSpacesModal(<?php echo json_encode($area); ?>)' 
+                                class="btn-lock" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                            <i class="fas fa-calendar-times"></i> Close Spaces
+                        </button>
+                        <?php endif; ?>
+                        
                         <!-- Lock/Unlock button (toggles is_booking_lot) -->
                         <form method="POST" style="display: inline;">
                             <input type="hidden" name="action" value="toggle_lock">
@@ -548,6 +571,51 @@ renderHeader('Manage Parking Areas'); // Sets page title
     </div>
 </div>
 
+<!-- Close Spaces Modal -->
+<div id="closeSpacesModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-ban"></i> Close Parking Spaces for Event</h3>
+            <button onclick="closeModal('closeSpacesModal')" class="close-btn">×</button>
+        </div>
+        <form method="POST">
+            <input type="hidden" name="action" value="close_spaces">
+            <input type="hidden" name="area_id" id="close_area_id">
+            
+            <div class="form-group">
+                <label>Area <span class="required">*</span></label>
+                <input type="text" id="close_area_name" disabled style="background: #f5f5f5;">
+            </div>
+            
+            <div class="form-group">
+                <label>Number of Spaces to Close <span class="required">*</span></label>
+                <input type="number" name="spaces_to_close" id="close_spaces_to_close" min="1" required>
+                <small>Available spaces: <span id="close_available_spaces"></span></small>
+            </div>
+            
+            <div class="form-group">
+                <label>Reason for Closure <span class="required">*</span></label>
+                <textarea name="closure_reason" id="close_reason" rows="3" required placeholder="e.g., University event, Maintenance, etc."></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>Closure Start <span class="required">*</span></label>
+                <input type="datetime-local" name="closure_start" id="close_start" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Closure End <span class="required">*</span></label>
+                <input type="datetime-local" name="closure_end" id="close_end" required>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="submit" class="btn-primary">🔒 Close Spaces</button>
+                <button type="button" onclick="closeModal('closeSpacesModal')" class="btn-secondary">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
 /* ==================== JAVASCRIPT FUNCTIONS ==================== */
 
@@ -581,6 +649,29 @@ function openEditModal(area) {
     document.getElementById('edit_is_booking').checked = area.is_booking_lot == 1;
     document.getElementById('edit_capacity').value = area.capacity;
     document.getElementById('editModal').style.display = 'flex';
+}
+
+/**
+ * Open Close Spaces modal and populate with area data
+ * @param {Object} area - Parking area object from PHP (JSON encoded)
+ */
+function openCloseSpacesModal(area) {
+    // Fill form fields with area data
+    document.getElementById('close_area_id').value = area.parkingLot_ID;
+    document.getElementById('close_area_name').value = area.parkingLot_name;
+    document.getElementById('close_spaces_to_close').max = area.capacity;
+    document.getElementById('close_available_spaces').textContent = area.capacity;
+    
+    // Set default start time to now
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    document.getElementById('close_start').value = now.toISOString().slice(0, 16);
+    
+    // Set default end time to 24 hours from now
+    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    document.getElementById('close_end').value = tomorrow.toISOString().slice(0, 16);
+    
+    document.getElementById('closeSpacesModal').style.display = 'flex';
 }
 
 /**

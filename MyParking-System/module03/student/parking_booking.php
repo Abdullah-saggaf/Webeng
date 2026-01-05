@@ -31,6 +31,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             throw new Exception('Please select a valid approved vehicle.');
         }
         
+        // Check if space is in a closed area (event closure)
+        $stmt = $db->prepare("
+            SELECT pl.parkingLot_ID, pl.parkingLot_name
+            FROM ParkingSpace ps
+            JOIN ParkingLot pl ON ps.parkingLot_ID = pl.parkingLot_ID
+            WHERE ps.space_ID = ?
+        ");
+        $stmt->execute([$spaceId]);
+        $spaceInfo = $stmt->fetch();
+        
+        if ($spaceInfo) {
+            // Check for active closure on this date
+            $stmt = $db->prepare("
+                SELECT log_ID, remarks
+                FROM ParkingLog
+                WHERE event_type = 'CLOSURE_START'
+                AND JSON_EXTRACT(remarks, '$.area_id') = ?
+                AND ? BETWEEN JSON_EXTRACT(remarks, '$.closure_start') AND JSON_EXTRACT(remarks, '$.closure_end')
+                AND log_ID NOT IN (
+                    SELECT JSON_EXTRACT(remarks, '$.closure_log_id')
+                    FROM ParkingLog
+                    WHERE event_type = 'CLOSURE_END'
+                    AND JSON_EXTRACT(remarks, '$.area_id') = ?
+                )
+            ");
+            $stmt->execute([$spaceInfo['parkingLot_ID'], $bookingDate, $spaceInfo['parkingLot_ID']]);
+            $activeClosure = $stmt->fetch();
+            
+            if ($activeClosure) {
+                $closureData = json_decode($activeClosure['remarks'], true);
+                $reason = $closureData['reason'] ?? 'Event';
+                throw new Exception("This parking area is temporarily closed for: {$reason}");
+            }
+        }
+        
         // Check if space is already booked for this date
         $stmt = $db->prepare("
             SELECT COUNT(*) as cnt 
@@ -122,7 +157,9 @@ $stmt = $db->prepare("
         ps.space_number,
         pl.parkingLot_name,
         pl.parkingLot_type,
+        pl.parkingLot_ID,
         CASE 
+            WHEN closures.log_ID IS NOT NULL THEN 'Closed'
             WHEN b.booking_ID IS NOT NULL THEN 'Occupied'
             ELSE 'Available'
         END as status
@@ -131,6 +168,17 @@ $stmt = $db->prepare("
     LEFT JOIN Booking b ON ps.space_ID = b.space_ID 
         AND b.booking_date = :date
         AND b.booking_status IN ('confirmed', 'active')
+    LEFT JOIN (
+        SELECT DISTINCT JSON_EXTRACT(remarks, '$.area_id') as area_id, log_ID
+        FROM ParkingLog
+        WHERE event_type = 'CLOSURE_START'
+        AND :date BETWEEN JSON_EXTRACT(remarks, '$.closure_start') AND JSON_EXTRACT(remarks, '$.closure_end')
+        AND log_ID NOT IN (
+            SELECT JSON_EXTRACT(remarks, '$.closure_log_id')
+            FROM ParkingLog
+            WHERE event_type = 'CLOSURE_END'
+        )
+    ) closures ON pl.parkingLot_ID = closures.area_id
     WHERE pl.is_booking_lot = 1 AND pl.parkingLot_type = 'Student' $whereClause
     ORDER BY pl.parkingLot_name, ps.space_number
 ");
@@ -200,6 +248,10 @@ renderHeader('Parking Booking');
             <?php if ($space['status'] === 'Available' && $space['parkingLot_type'] === 'Student'): ?>
             <button class="btn-book" onclick="openBookingModal(<?php echo $space['space_ID']; ?>, '<?php echo htmlspecialchars($space['space_number']); ?>', '<?php echo htmlspecialchars($space['parkingLot_name']); ?>')">
                 <i class="fas fa-calendar-check"></i> Book Now
+            </button>
+            <?php elseif ($space['status'] === 'Closed'): ?>
+            <button class="btn-book" disabled style="background: #dc3545; cursor: not-allowed;">
+                <i class="fas fa-ban"></i> Area Closed
             </button>
             <?php elseif ($space['status'] === 'Available' && $space['parkingLot_type'] !== 'Student'): ?>
             <button class="btn-restricted" disabled>
