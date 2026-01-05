@@ -358,22 +358,146 @@
 /* Responsive Design */
 @media (max-width: 768px) {
     .parking-session-container {
-        padding: 20px 15px;
+        padding: 10px;
+        max-width: 100%;
     }
     
     .session-card {
-        padding: 20px;
+        padding: 15px;
+        border-radius: 12px;
+        margin: 0;
     }
     
     .session-card h2 {
-        font-size: 24px;
+        font-size: 20px;
+        margin-bottom: 15px;
+    }
+    
+    .booking-details-section {
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .booking-details-section h3 {
+        font-size: 18px;
+        margin-bottom: 15px;
     }
     
     .detail-grid {
         grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .detail-item {
+        padding: 12px;
+    }
+    
+    .detail-item label {
+        font-size: 12px;
+    }
+    
+    .detail-value {
+        font-size: 15px;
+    }
+    
+    .duration-selection-section h3 {
+        font-size: 18px;
     }
     
     .duration-options {
         grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    
+    .duration-option {
+        padding: 12px;
+    }
+    
+    .duration-option label {
+        font-size: 14px;
+    }
+    
+    .custom-duration-input,
+    .specific-time-input {
+        padding: 12px 15px;
+        font-size: 14px;
+    }
+    
+    .btn-confirm {
+        width: 100%;
+        padding: 14px;
+        font-size: 15px;
+        margin-top: 15px;
+    }
+    
+    .btn-back {
+        width: 100%;
+        padding: 12px;
+        font-size: 14px;
+        text-align: center;
+        justify-content: center;
+    }
+    
+    .action-buttons {
+        margin-top: 15px;
+    }
+    
+    .active-session-info {
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .active-badge {
+        font-size: 13px;
+        padding: 6px 12px;
+    }
+    
+    .session-times p {
+        font-size: 14px;
+    }
+    
+    .session-completed {
+        padding: 30px 15px;
+    }
+    
+    .session-completed i {
+        font-size: 36px;
+    }
+    
+    .alert {
+        padding: 12px 15px;
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    .parking-session-container {
+        padding: 5px;
+    }
+    
+    .session-card {
+        padding: 12px;
+        border-radius: 10px;
+    }
+    
+    .session-card h2 {
+        font-size: 18px;
+        gap: 8px;
+    }
+    
+    .booking-details-section {
+        padding: 12px;
+    }
+    
+    .booking-details-section h3 {
+        font-size: 16px;
+    }
+    
+    .detail-item {
+        padding: 10px;
+    }
+    
+    .detail-value {
+        font-size: 14px;
     }
 }

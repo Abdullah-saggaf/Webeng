@@ -199,7 +199,8 @@ $stmt = $db->prepare("
         pl.parkingLot_type,
         v.license_plate,
         v.vehicle_model,
-        v.vehicle_type
+        v.vehicle_type,
+        b.qr_token
     FROM Booking b
     JOIN ParkingSpace ps ON b.space_ID = ps.space_ID
     JOIN ParkingLot pl ON ps.parkingLot_ID = pl.parkingLot_ID
@@ -210,6 +211,27 @@ $stmt = $db->prepare("
 ");
 $stmt->execute([$userId]);
 $bookings = $stmt->fetchAll();
+
+// Auto-complete expired active bookings
+$currentTime = date('Y-m-d H:i:s');
+$completeStmt = $db->prepare("
+    UPDATE Booking b
+    JOIN Vehicle v ON b.vehicle_ID = v.vehicle_ID
+    SET b.booking_status = 'completed',
+        b.session_ended_at = b.actual_end_time
+    WHERE v.user_ID = ? 
+    AND b.booking_status = 'active' 
+    AND b.actual_end_time IS NOT NULL 
+    AND b.actual_end_time > '1000-01-01 00:00:00'
+    AND b.actual_end_time < ?
+");
+$completeStmt->execute([$userId, $currentTime]);
+
+// If bookings were completed, refresh the list
+if ($completeStmt->rowCount() > 0) {
+    $stmt->execute([$userId]);
+    $bookings = $stmt->fetchAll();
+}
 
 // Get user's vehicles for edit modal
 $vehiclesStmt = $db->prepare("SELECT vehicle_ID, vehicle_type, vehicle_model, license_plate, grant_status FROM Vehicle WHERE user_ID = ? ORDER BY grant_status DESC, created_at DESC");
@@ -302,10 +324,10 @@ renderHeader('My Bookings');
             
             <div class="booking-actions">
                 <?php if ($booking['booking_status'] === 'confirmed'): ?>
-                    <a href="<?php echo APP_BASE_PATH; ?>/module03/parking_session.php?booking_id=<?php echo $booking['booking_ID']; ?>" 
-                       class="btn-edit" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">
-                        <i class="fas fa-play-circle"></i> Start Session
-                    </a>
+                    <div class="qr-code-container" style="text-align: center; margin: 15px 0;">
+                        <p style="font-weight: 600; color: #1f2937; margin-bottom: 10px;"><i class="fas fa-qrcode"></i> Scan to Start Session</p>
+                        <div id="qrcode_<?php echo $booking['booking_ID']; ?>" style="display: inline-block; padding: 10px; background: white; border-radius: 8px;"></div>
+                    </div>
                     <button type="button" class="btn-edit" onclick='openEditModal(<?php echo json_encode($booking); ?>)'>
                         <i class="fas fa-edit"></i> Edit
                     </button>
@@ -318,12 +340,24 @@ renderHeader('My Bookings');
                     </form>
                 <?php elseif ($booking['booking_status'] === 'active'): ?>
                     <a href="<?php echo APP_BASE_PATH; ?>/module03/parking_session.php?booking_id=<?php echo $booking['booking_ID']; ?>" 
-                       class="btn-edit" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; background: #10b981;">
+                       class="btn-view-session">
                         <i class="fas fa-eye"></i> View Session
                     </a>
-                    <p style="color: #10b981; font-weight: 500; margin: 0;">
-                        <i class="fas fa-circle" style="font-size: 8px;"></i> Active
-                    </p>
+                    <div class="active-indicator">
+                        <i class="fas fa-circle pulse"></i> Active Session
+                    </div>
+                <?php elseif ($booking['booking_status'] === 'completed'): ?>
+                    <div class="completed-info" style="text-align: center; padding: 15px; background: #f3f4f6; border-radius: 8px; margin-bottom: 10px;">
+                        <i class="fas fa-check-circle" style="color: #10b981; font-size: 24px; margin-bottom: 5px;"></i>
+                        <p style="color: #6b7280; font-size: 14px; margin: 0;">Session Completed</p>
+                    </div>
+                    <form method="POST" style="display: inline; width: 100%;">
+                        <input type="hidden" name="action" value="delete">
+                        <input type="hidden" name="booking_id" value="<?php echo $booking['booking_ID']; ?>">
+                        <button type="submit" class="btn-delete" onclick="return confirm('Delete this completed booking? This action cannot be undone.')">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </form>
                 <?php endif; ?>
             </div>
         </div>
@@ -397,7 +431,24 @@ renderHeader('My Bookings');
     </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
+// Generate QR codes for all confirmed bookings
+document.addEventListener('DOMContentLoaded', function() {
+    <?php foreach ($bookings as $booking): ?>
+        <?php if ($booking['booking_status'] === 'confirmed' && !empty($booking['qr_token'])): ?>
+            new QRCode(document.getElementById('qrcode_<?php echo $booking['booking_ID']; ?>'), {
+                text: '<?php echo QR_BASE_URL; ?>/module03/parking_session.php?booking_id=<?php echo $booking['booking_ID']; ?>&token=<?php echo $booking['qr_token']; ?>',
+                width: 180,
+                height: 180,
+                colorDark: '#000000',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        <?php endif; ?>
+    <?php endforeach; ?>
+});
+
 function openEditModal(booking) {
     document.getElementById('edit_booking_id').value = booking.booking_ID;
     document.getElementById('edit_space').value = booking.space_number;
@@ -510,8 +561,84 @@ window.onclick = function(event) {
     background: #dc2626;
 }
 
+.btn-delete {
+    background: #6b7280;
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    transition: all 0.3s ease;
+}
+
+.btn-delete:hover {
+    background: #ef4444;
+    transform: translateY(-2px);
+}
+
+.btn-view-session {
+    background: #10b981;
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-decoration: none;
+    width: 100%;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+}
+
+.btn-view-session:hover {
+    background: #059669;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+}
+
+.active-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #10b981;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 8px 0;
+    margin-top: 8px;
+}
+
+.active-indicator .pulse {
+    font-size: 10px;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.5;
+        transform: scale(0.8);
+    }
+}
+
 .booking-actions {
     display: flex;
+    flex-direction: column;
     gap: 10px;
     margin-top: 15px;
     padding-top: 15px;

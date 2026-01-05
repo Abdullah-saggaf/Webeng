@@ -75,12 +75,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             throw new Exception('End time must be after start time.');
         }
         
-        // Create booking with confirmed status
+        // Generate unique QR token for this booking
+        $qrToken = bin2hex(random_bytes(32));
+        
+        // Create booking with confirmed status and QR token
         $stmt = $db->prepare("
-            INSERT INTO Booking (vehicle_ID, space_ID, booking_date, start_time, end_time, booking_status) 
-            VALUES (?, ?, ?, ?, ?, 'confirmed')
+            INSERT INTO Booking (vehicle_ID, space_ID, booking_date, start_time, end_time, booking_status, qr_token) 
+            VALUES (?, ?, ?, ?, ?, 'confirmed', ?)
         ");
-        $stmt->execute([$vehicleId, $spaceId, $bookingDate, $startTime, $endTime]);
+        $stmt->execute([$vehicleId, $spaceId, $bookingDate, $startTime, $endTime, $qrToken]);
         
         $message = 'Booking confirmed successfully!';
         $messageType = 'success';

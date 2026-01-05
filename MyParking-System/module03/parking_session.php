@@ -2,29 +2,54 @@
 /**
  * Parking Session Management
  * Module 3 - MyParking System
+ * Supports both authenticated session and QR token access
  */
 
-require_once __DIR__ . '/../module01/auth.php';
+// Enable error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 require_once __DIR__ . '/../database/db_config.php';
 
-// Require Student role
-requireRole(['student']);
-
 $db = getDB();
-$userId = $_SESSION['user_id'];
 $message = '';
 $messageType = '';
 
-// Get booking ID from URL
+// Get booking ID and token from URL
 $bookingId = $_GET['booking_id'] ?? null;
+$token = $_GET['token'] ?? null;
 
 if (!$bookingId) {
-    header("Location: " . APP_BASE_PATH . "/module03/student/my_bookings.php");
+    if (defined('APP_BASE_PATH')) {
+        header("Location: " . APP_BASE_PATH . "/module03/student/my_bookings.php");
+    } else {
+        header("Location: /Webeng/MyParking-System/module03/student/my_bookings.php");
+    }
     exit();
 }
 
+// Token-based authentication (for QR code access)
+if ($token) {
+    // Verify token matches booking
+    $stmt = $db->prepare("SELECT booking_ID FROM Booking WHERE booking_ID = ? AND qr_token = ?");
+    $stmt->execute([$bookingId, $token]);
+    $validToken = $stmt->fetch();
+    
+    if (!$validToken) {
+        die("Invalid or expired QR code. Please scan a valid QR code.");
+    }
+    
+    // Token is valid - no session required
+    $userId = null; // Will be retrieved from booking
+} else {
+    // Session-based authentication (for logged-in students)
+    require_once __DIR__ . '/../module01/auth.php';
+    requireRole(['student']);
+    $userId = $_SESSION['user_id'];
+}
+
 // Get booking details with student and vehicle information
-$stmt = $db->prepare("
+$query = "
     SELECT 
         b.*,
         ps.space_number,
@@ -32,15 +57,27 @@ $stmt = $db->prepare("
         pl.parkingLot_type,
         v.license_plate,
         v.vehicle_model,
+        v.user_ID,
         u.username as student_name
     FROM Booking b
     JOIN ParkingSpace ps ON b.space_ID = ps.space_ID
     JOIN ParkingLot pl ON ps.parkingLot_ID = pl.parkingLot_ID
     JOIN Vehicle v ON b.vehicle_ID = v.vehicle_ID
     JOIN User u ON v.user_ID = u.user_ID
-    WHERE b.booking_ID = ? AND v.user_ID = ?
-");
-$stmt->execute([$bookingId, $userId]);
+    WHERE b.booking_ID = ?
+";
+
+if ($userId) {
+    // If logged in, verify user owns this booking
+    $query .= " AND v.user_ID = ?";
+    $stmt = $db->prepare($query);
+    $stmt->execute([$bookingId, $userId]);
+} else {
+    // Token access - no user verification needed
+    $stmt = $db->prepare($query);
+    $stmt->execute([$bookingId]);
+}
+
 $booking = $stmt->fetch();
 
 if (!$booking) {
@@ -57,8 +94,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $endTime = $_POST['end_time'] ?? '';
         
         try {
-            $db->beginTransaction();
-            
             // Calculate end time based on duration type
             $actualEndTime = '';
             $startTime = date('Y-m-d H:i:s');
@@ -72,44 +107,125 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } elseif ($durationType === 'custom' && $customDuration) {
                 $actualEndTime = date('Y-m-d H:i:s', strtotime("+{$customDuration} minutes"));
             } elseif ($durationType === 'specific' && $endTime) {
-                $actualEndTime = $endTime;
+                $actualEndTime = date('Y-m-d', strtotime($booking['booking_date'])) . ' ' . $endTime . ':00';
             } else {
                 throw new Exception('Please select a valid duration');
             }
             
-            // Update booking status to active
+            // Validate that end time is in the future
+            if (empty($actualEndTime) || strtotime($actualEndTime) <= strtotime($startTime)) {
+                throw new Exception('Invalid end time calculated. Please try again.');
+            }
+            
+            // Update booking status to active with all session details
             $updateStmt = $db->prepare("
                 UPDATE Booking 
                 SET booking_status = 'active',
                     actual_start_time = ?,
                     actual_end_time = ?,
-                    session_started_at = NOW()
+                    actual_vehicle_id = ?,
+                    actual_plate_number = ?,
+                    session_started_at = ?
                 WHERE booking_ID = ?
             ");
-            $updateStmt->execute([$startTime, $actualEndTime, $bookingId]);
+            $updateStmt->execute([
+                $startTime, 
+                $actualEndTime, 
+                $booking['vehicle_ID'], 
+                $booking['license_plate'], 
+                $startTime,
+                $bookingId
+            ]);
             
-            $db->commit();
-            
-            $message = 'Parking session confirmed successfully!';
-            $messageType = 'success';
-            
-            // Refresh booking data
-            $stmt->execute([$bookingId, $userId]);
-            $booking = $stmt->fetch();
+            if ($updateStmt->rowCount() > 0) {
+                $message = 'Parking session confirmed successfully!';
+                $messageType = 'success';
+                
+                // Refresh booking data
+                if ($userId) {
+                    $query = "
+                        SELECT 
+                            b.*,
+                            ps.space_number,
+                            pl.parkingLot_name,
+                            pl.parkingLot_type,
+                            v.license_plate,
+                            v.vehicle_model,
+                            v.user_ID,
+                            u.username as student_name
+                        FROM Booking b
+                        JOIN ParkingSpace ps ON b.space_ID = ps.space_ID
+                        JOIN ParkingLot pl ON ps.parkingLot_ID = pl.parkingLot_ID
+                        JOIN Vehicle v ON b.vehicle_ID = v.vehicle_ID
+                        JOIN User u ON v.user_ID = u.user_ID
+                        WHERE b.booking_ID = ? AND v.user_ID = ?
+                    ";
+                    $stmt = $db->prepare($query);
+                    $stmt->execute([$bookingId, $userId]);
+                } else {
+                    $query = "
+                        SELECT 
+                            b.*,
+                            ps.space_number,
+                            pl.parkingLot_name,
+                            pl.parkingLot_type,
+                            v.license_plate,
+                            v.vehicle_model,
+                            v.user_ID,
+                            u.username as student_name
+                        FROM Booking b
+                        JOIN ParkingSpace ps ON b.space_ID = ps.space_ID
+                        JOIN ParkingLot pl ON ps.parkingLot_ID = pl.parkingLot_ID
+                        JOIN Vehicle v ON b.vehicle_ID = v.vehicle_ID
+                        JOIN User u ON v.user_ID = u.user_ID
+                        WHERE b.booking_ID = ?
+                    ";
+                    $stmt = $db->prepare($query);
+                    $stmt->execute([$bookingId]);
+                }
+                $booking = $stmt->fetch();
+            } else {
+                throw new Exception('Failed to update booking status');
+            }
             
         } catch (Exception $e) {
-            $db->rollBack();
             $message = 'Error: ' . $e->getMessage();
             $messageType = 'error';
         }
     }
 }
 
-require_once __DIR__ . '/../layout.php';
-renderHeader('Parking Session');
+// Include layout if user is logged in, otherwise use minimal header
+if ($token) {
+    // Minimal header for QR code access (no navigation)
+    $basePath = '/Webeng/MyParking-System';
+    ?>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Parking Session - MyParking System</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <link rel="stylesheet" href="<?php echo $basePath; ?>/module03/parking_session.css?v=<?php echo time(); ?>">
+        <style>
+            * { box-sizing: border-box; }
+            body { background: #f3f4f6; margin: 0; padding: 20px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        </style>
+    </head>
+    <body>
+    <?php
+} else {
+    // Full layout for logged-in users
+    require_once __DIR__ . '/../layout.php';
+    renderHeader('Parking Session');
+    ?>
+    <link rel="stylesheet" href="<?php echo APP_BASE_PATH; ?>/module03/parking_session.css?v=<?php echo time(); ?>">
+    <?php
+}
 ?>
 
-<link rel="stylesheet" href="<?php echo APP_BASE_PATH; ?>/module03/parking_session.css?v=<?php echo time(); ?>">
+<div class="parking-session-container">?>
 
 <div class="parking-session-container">
     <div class="session-card">
@@ -254,9 +370,15 @@ renderHeader('Parking Session');
         <?php endif; ?>
         
         <div class="action-buttons">
-            <a href="<?php echo APP_BASE_PATH; ?>/module03/student/my_bookings.php" class="btn-back">
-                <i class="fas fa-arrow-left"></i> Back to My Bookings
-            </a>
+            <?php if ($token): ?>
+                <button onclick="window.close()" class="btn-back">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            <?php else: ?>
+                <a href="<?php echo APP_BASE_PATH; ?>/module03/student/my_bookings.php" class="btn-back">
+                    <i class="fas fa-arrow-left"></i> Back to My Bookings
+                </a>
+            <?php endif; ?>
         </div>
     </div>
 </div>
@@ -284,4 +406,12 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<?php renderFooter(); ?>
+<?php 
+if ($token) {
+    // Close minimal HTML for QR access
+    echo '</body></html>';
+} else {
+    // Full footer for logged-in users
+    renderFooter();
+}
+?>
