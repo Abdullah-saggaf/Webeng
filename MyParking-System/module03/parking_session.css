@@ -1,0 +1,503 @@
+/* Parking Session Styles */
+
+.parking-session-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 30px 20px;
+}
+
+.session-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 30px;
+}
+
+.session-card h2 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.session-card h2 i {
+    color: #3b82f6;
+}
+
+/* Alert Messages */
+.alert {
+    padding: 15px 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    font-weight: 600;
+}
+
+.alert-success {
+    background: #d1fae5;
+    color: #065f46;
+    border: 2px solid #10b981;
+}
+
+.alert-error {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 2px solid #ef4444;
+}
+
+/* Booking Details Section */
+.booking-details-section {
+    background: #f9fafb;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 30px;
+}
+
+.booking-details-section h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 20px;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.detail-item {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+}
+
+.detail-item label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #6b7280;
+    margin-bottom: 8px;
+}
+
+.detail-item label i {
+    color: #3b82f6;
+}
+
+.detail-value {
+    font-size: 16px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-confirmed {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.status-active {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.status-completed {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.status-cancelled {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+/* Confirmation Section */
+.confirmation-section {
+    background: #f0f9ff;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 30px;
+    border: 2px solid #3b82f6;
+}
+
+.confirmation-section h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 10px;
+}
+
+.section-description {
+    color: #6b7280;
+    margin-bottom: 25px;
+    font-size: 14px;
+}
+
+/* Form Styles */
+.form-group {
+    margin-bottom: 25px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 15px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 12px;
+}
+
+.required {
+    color: #ef4444;
+}
+
+.form-control {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 15px;
+    transition: all 0.3s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Duration Options */
+.duration-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+}
+
+.duration-option {
+    position: relative;
+    cursor: pointer;
+}
+
+.duration-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+}
+
+.option-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 20px 15px;
+    background: white;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+    transition: all 0.3s;
+    text-align: center;
+}
+
+.option-content i {
+    font-size: 24px;
+    color: #6b7280;
+}
+
+.option-content strong {
+    font-size: 14px;
+    color: #374151;
+}
+
+.duration-option input[type="radio"]:checked + .option-content {
+    background: #eff6ff;
+    border-color: #3b82f6;
+}
+
+.duration-option input[type="radio"]:checked + .option-content i {
+    color: #3b82f6;
+}
+
+.duration-option input[type="radio"]:checked + .option-content strong {
+    color: #1e40af;
+}
+
+.duration-option:hover .option-content {
+    border-color: #3b82f6;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Buttons */
+.btn-confirm {
+    width: 100%;
+    padding: 15px;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.3s;
+}
+
+.btn-confirm:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(59, 130, 246, 0.4);
+}
+
+.btn-confirm i {
+    font-size: 18px;
+}
+
+.btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: #6b7280;
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.btn-back:hover {
+    background: #4b5563;
+    transform: translateY(-2px);
+}
+
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+/* Active Session Info */
+.active-session-info {
+    background: #d1fae5;
+    border: 2px solid #10b981;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 30px;
+}
+
+.active-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #10b981;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 15px;
+}
+
+.active-badge i {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.session-times p {
+    margin: 8px 0;
+    color: #065f46;
+    font-size: 15px;
+}
+
+.session-times strong {
+    font-weight: 600;
+}
+
+/* Session Completed */
+.session-completed {
+    text-align: center;
+    padding: 40px;
+    background: #f9fafb;
+    border-radius: 12px;
+    margin-bottom: 30px;
+}
+
+.session-completed i {
+    font-size: 48px;
+    color: #10b981;
+    margin-bottom: 15px;
+}
+
+.session-completed p {
+    font-size: 16px;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .parking-session-container {
+        padding: 10px;
+        max-width: 100%;
+    }
+    
+    .session-card {
+        padding: 15px;
+        border-radius: 12px;
+        margin: 0;
+    }
+    
+    .session-card h2 {
+        font-size: 20px;
+        margin-bottom: 15px;
+    }
+    
+    .booking-details-section {
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .booking-details-section h3 {
+        font-size: 18px;
+        margin-bottom: 15px;
+    }
+    
+    .detail-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .detail-item {
+        padding: 12px;
+    }
+    
+    .detail-item label {
+        font-size: 12px;
+    }
+    
+    .detail-value {
+        font-size: 15px;
+    }
+    
+    .duration-selection-section h3 {
+        font-size: 18px;
+    }
+    
+    .duration-options {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    
+    .duration-option {
+        padding: 12px;
+    }
+    
+    .duration-option label {
+        font-size: 14px;
+    }
+    
+    .custom-duration-input,
+    .specific-time-input {
+        padding: 12px 15px;
+        font-size: 14px;
+    }
+    
+    .btn-confirm {
+        width: 100%;
+        padding: 14px;
+        font-size: 15px;
+        margin-top: 15px;
+    }
+    
+    .btn-back {
+        width: 100%;
+        padding: 12px;
+        font-size: 14px;
+        text-align: center;
+        justify-content: center;
+    }
+    
+    .action-buttons {
+        margin-top: 15px;
+    }
+    
+    .active-session-info {
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .active-badge {
+        font-size: 13px;
+        padding: 6px 12px;
+    }
+    
+    .session-times p {
+        font-size: 14px;
+    }
+    
+    .session-completed {
+        padding: 30px 15px;
+    }
+    
+    .session-completed i {
+        font-size: 36px;
+    }
+    
+    .alert {
+        padding: 12px 15px;
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    .parking-session-container {
+        padding: 5px;
+    }
+    
+    .session-card {
+        padding: 12px;
+        border-radius: 10px;
+    }
+    
+    .session-card h2 {
+        font-size: 18px;
+        gap: 8px;
+    }
+    
+    .booking-details-section {
+        padding: 12px;
+    }
+    
+    .booking-details-section h3 {
+        font-size: 16px;
+    }
+    
+    .detail-item {
+        padding: 10px;
+    }
+    
+    .detail-value {
+        font-size: 14px;
+    }
+}

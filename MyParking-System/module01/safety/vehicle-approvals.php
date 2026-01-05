@@ -12,17 +12,16 @@ try {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $action = $_POST['action'] ?? '';
         $vehicleId = (int)($_POST['vehicle_id'] ?? 0);
-        $reason = trim($_POST['rejection_reason'] ?? '');
 
         if ($vehicleId <= 0) {
             throw new Exception('Vehicle not found.');
         }
 
         if ($action === 'approve') {
-            setVehicleStatus($vehicleId, 'Approved', null);
+            setVehicleStatus($vehicleId, 'Approved');
             $message = 'Vehicle approved.';
         } elseif ($action === 'reject') {
-            setVehicleStatus($vehicleId, 'Rejected', $reason ?: null);
+            setVehicleStatus($vehicleId, 'Rejected');
             $message = 'Vehicle rejected.';
         }
     }
