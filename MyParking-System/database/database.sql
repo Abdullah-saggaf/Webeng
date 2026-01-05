@@ -108,8 +108,7 @@ CREATE TABLE Booking (
 CREATE TABLE Violation (
     violation_ID INT PRIMARY KEY AUTO_INCREMENT,
     violation_type VARCHAR(30) NOT NULL,
-    violation_points INT NOT NULL,
-    fine_amount INT NOT NULL
+    violation_points INT NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================
@@ -117,15 +116,17 @@ CREATE TABLE Violation (
 -- ============================================
 CREATE TABLE Ticket (
     ticket_ID INT PRIMARY KEY AUTO_INCREMENT,
-    vehicle_ID INT NOT NULL,
+    vehicle_ID INT NULL,
     user_ID VARCHAR(10) NOT NULL,
     violation_ID INT NOT NULL,
     ticket_status VARCHAR(20) NOT NULL,
     issued_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     description VARCHAR(100) NULL,
+    qr_code_value VARCHAR(64) NULL,
     FOREIGN KEY (vehicle_ID) REFERENCES Vehicle(vehicle_ID) ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (user_ID) REFERENCES User(user_ID) ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (violation_ID) REFERENCES Violation(violation_ID) ON DELETE CASCADE ON UPDATE CASCADE
+    FOREIGN KEY (violation_ID) REFERENCES Violation(violation_ID) ON DELETE CASCADE ON UPDATE CASCADE,
+    UNIQUE KEY unique_ticket_qr (qr_code_value)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================

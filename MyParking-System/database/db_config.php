@@ -4,6 +4,9 @@
  * MyParking Management System
  */
 
+// Set timezone to Malaysia
+date_default_timezone_set('Asia/Kuala_Lumpur');
+
 // ============================================
 // Database Configuration
 // ============================================
@@ -391,18 +394,121 @@ function getParkingLotAvailability() {
 // Ticket Functions
 // ============================================
 
+/**
+ * Generate a unique QR code for tickets (Module 04)
+ * @return string 32-character unique code
+ */
+function generateTicketQrCode() {
+    return bin2hex(random_bytes(16)); // 32 characters
+}
+
+/**
+ * Ensure ticket has a QR code, generate if missing (Module 04)
+ * @param int $ticketId
+ * @return string QR code value
+ */
+function ensureTicketHasQrCode($ticketId) {
+    $db = getDB();
+    
+    // Check if ticket already has QR code
+    $sql = "SELECT qr_code_value FROM Ticket WHERE ticket_ID = :ticket_id";
+    $stmt = $db->prepare($sql);
+    $stmt->execute([':ticket_id' => $ticketId]);
+    $result = $stmt->fetch();
+    
+    if (!$result) {
+        throw new Exception("Ticket not found");
+    }
+    
+    // If QR code exists and not empty, return it
+    if (!empty($result['qr_code_value'])) {
+        return $result['qr_code_value'];
+    }
+    
+    // Generate unique QR code
+    $maxAttempts = 10;
+    $attempts = 0;
+    
+    do {
+        $qrCode = generateTicketQrCode();
+        
+        // Check if unique
+        $checkSql = "SELECT COUNT(*) as count FROM Ticket WHERE qr_code_value = :qr_code";
+        $checkStmt = $db->prepare($checkSql);
+        $checkStmt->execute([':qr_code' => $qrCode]);
+        $exists = $checkStmt->fetch()['count'] > 0;
+        
+        $attempts++;
+    } while ($exists && $attempts < $maxAttempts);
+    
+    if ($exists) {
+        throw new Exception("Failed to generate unique QR code");
+    }
+    
+    // Update ticket with QR code
+    $updateSql = "UPDATE Ticket SET qr_code_value = :qr_code WHERE ticket_ID = :ticket_id";
+    $updateStmt = $db->prepare($updateSql);
+    $updateStmt->execute([
+        ':qr_code' => $qrCode,
+        ':ticket_id' => $ticketId
+    ]);
+    
+    return $qrCode;
+}
+
+/**
+ * Create a new ticket (Module 04 compliant)
+ * @return array ['ticket_id' => int, 'qr_code_value' => string]
+ */
 function createTicket($vehicleId, $userId, $violationId, $description, $issuedAt = null) {
     $db = getDB();
-    $sql = "INSERT INTO Ticket (vehicle_ID, user_ID, violation_ID, ticket_status, issued_at, description) 
-            VALUES (:vehicle_id, :user_id, :violation_id, 'Unpaid', :issued_at, :description)";
+    
+    // Generate unique QR code
+    $maxAttempts = 10;
+    $attempts = 0;
+    
+    do {
+        $qrCode = generateTicketQrCode();
+        
+        // Check if unique
+        $checkSql = "SELECT COUNT(*) as count FROM Ticket WHERE qr_code_value = :qr_code";
+        $checkStmt = $db->prepare($checkSql);
+        $checkStmt->execute([':qr_code' => $qrCode]);
+        $exists = $checkStmt->fetch()['count'] > 0;
+        
+        $attempts++;
+    } while ($exists && $attempts < $maxAttempts);
+    
+    if ($exists) {
+        throw new Exception("Failed to generate unique QR code");
+    }
+    
+    // Insert ticket with 'Completed' status and QR code
+    $sql = "INSERT INTO Ticket (vehicle_ID, user_ID, violation_ID, ticket_status, issued_at, description, qr_code_value) 
+            VALUES (:vehicle_id, :user_id, :violation_id, 'Completed', :issued_at, :description, :qr_code)";
     $stmt = $db->prepare($sql);
-    return $stmt->execute([
+    $success = $stmt->execute([
         ':vehicle_id' => $vehicleId,
         ':user_id' => $userId,
         ':violation_id' => $violationId,
         ':issued_at' => $issuedAt ?? date('Y-m-d H:i:s'),
-        ':description' => $description
+        ':description' => $description,
+        ':qr_code' => $qrCode
     ]);
+    
+    if (!$success) {
+        throw new Exception("Failed to create ticket");
+    }
+    
+    $ticketId = (int)$db->lastInsertId();
+    
+    // Recalculate user points
+    recalculateUserPoints($userId);
+    
+    return [
+        'ticket_id' => $ticketId,
+        'qr_code_value' => $qrCode
+    ];
 }
 
 function getTicketsByUser($userId) {
@@ -412,10 +518,9 @@ function getTicketsByUser($userId) {
                 v.license_plate,
                 v.vehicle_type,
                 vl.violation_type,
-                vl.violation_points,
-                vl.fine_amount
+                vl.violation_points
             FROM Ticket t
-            INNER JOIN Vehicle v ON t.vehicle_ID = v.vehicle_ID
+            LEFT JOIN Vehicle v ON t.vehicle_ID = v.vehicle_ID
             INNER JOIN Violation vl ON t.violation_ID = vl.violation_ID
             WHERE t.user_ID = :user_id
             ORDER BY t.issued_at DESC";
@@ -424,14 +529,44 @@ function getTicketsByUser($userId) {
     return $stmt->fetchAll();
 }
 
+/**
+ * Update ticket status (Module 04 compliant - only Completed/Cancelled)
+ * @param int $ticketId
+ * @param string $newStatus 'Completed' or 'Cancelled'
+ * @return bool
+ */
 function updateTicketStatus($ticketId, $newStatus) {
     $db = getDB();
+    
+    // Only allow 'Completed' or 'Cancelled'
+    if (!in_array($newStatus, ['Completed', 'Cancelled'])) {
+        throw new Exception("Invalid ticket status. Only 'Completed' or 'Cancelled' are allowed.");
+    }
+    
+    // Get user_ID for this ticket first
+    $getUserSql = "SELECT user_ID FROM Ticket WHERE ticket_ID = :ticket_id";
+    $getUserStmt = $db->prepare($getUserSql);
+    $getUserStmt->execute([':ticket_id' => $ticketId]);
+    $ticket = $getUserStmt->fetch();
+    
+    if (!$ticket) {
+        return false;
+    }
+    
+    // Update status
     $sql = "UPDATE Ticket SET ticket_status = :status WHERE ticket_ID = :ticket_id";
     $stmt = $db->prepare($sql);
-    return $stmt->execute([
+    $success = $stmt->execute([
         ':status' => $newStatus,
         ':ticket_id' => $ticketId
     ]);
+    
+    // Recalculate points after status change
+    if ($success) {
+        recalculateUserPoints($ticket['user_ID']);
+    }
+    
+    return $success;
 }
 
 // ============================================
@@ -455,6 +590,156 @@ function getParkingLogsByBooking($booking_id) {
     $sql = "SELECT * FROM ParkingLog WHERE booking_ID = :booking_id ORDER BY event_time DESC";
     $stmt = $db->prepare($sql);
     $stmt->execute([':booking_id' => $booking_id]);
+    return $stmt->fetchAll();
+}
+
+// ============================================
+// Module 04: QR Code & Points Management Functions
+// ============================================
+
+/**
+ * Get ticket details by QR code for public view (Module 04)
+ * @param string $code QR code value
+ * @return array|false Ticket details with all joined data
+ */
+function getTicketDetailsByQrCode($code) {
+    $db = getDB();
+    $sql = "SELECT 
+                t.ticket_ID,
+                t.ticket_status,
+                t.issued_at,
+                t.description,
+                t.qr_code_value,
+                u.user_ID,
+                u.username,
+                u.email,
+                v.vehicle_ID,
+                v.license_plate,
+                v.vehicle_type,
+                v.vehicle_model,
+                vl.violation_ID,
+                vl.violation_type,
+                vl.violation_points
+            FROM Ticket t
+            INNER JOIN User u ON t.user_ID = u.user_ID
+            LEFT JOIN Vehicle v ON t.vehicle_ID = v.vehicle_ID
+            INNER JOIN Violation vl ON t.violation_ID = vl.violation_ID
+            WHERE t.qr_code_value = :code
+            LIMIT 1";
+    $stmt = $db->prepare($sql);
+    $stmt->execute([':code' => $code]);
+    return $stmt->fetch();
+}
+
+/**
+ * Get ticket details by ticket ID (Module 04)
+ * @param int $ticketId
+ * @return array|false Ticket details with all joined data
+ */
+function getTicketDetailsById($ticketId) {
+    $db = getDB();
+    $sql = "SELECT 
+                t.ticket_ID,
+                t.ticket_status,
+                t.issued_at,
+                t.description,
+                t.qr_code_value,
+                u.user_ID,
+                u.username,
+                u.email,
+                v.vehicle_ID,
+                v.license_plate,
+                v.vehicle_type,
+                v.vehicle_model,
+                vl.violation_ID,
+                vl.violation_type,
+                vl.violation_points
+            FROM Ticket t
+            INNER JOIN User u ON t.user_ID = u.user_ID
+            LEFT JOIN Vehicle v ON t.vehicle_ID = v.vehicle_ID
+            INNER JOIN Violation vl ON t.violation_ID = vl.violation_ID
+            WHERE t.ticket_ID = :ticket_id
+            LIMIT 1";
+    $stmt = $db->prepare($sql);
+    $stmt->execute([':ticket_id' => $ticketId]);
+    return $stmt->fetch();
+}
+
+/**
+ * Recalculate user's total demerit points from all Completed tickets (Module 04)
+ * @param string $userId
+ * @return int Total points
+ */
+function recalculateUserPoints($userId) {
+    $db = getDB();
+    
+    // Calculate total points from Completed tickets only
+    $sql = "SELECT COALESCE(SUM(v.violation_points), 0) AS total
+            FROM Ticket t
+            INNER JOIN Violation v ON t.violation_ID = v.violation_ID
+            WHERE t.user_ID = :user_id AND t.ticket_status = 'Completed'";
+    $stmt = $db->prepare($sql);
+    $stmt->execute([':user_id' => $userId]);
+    $total = (int)$stmt->fetch()['total'];
+    
+    // Insert or update User_points
+    $updateSql = "INSERT INTO User_points (user_ID, total_points) 
+                  VALUES (:user_id, :total) 
+                  ON DUPLICATE KEY UPDATE total_points = :total";
+    $updateStmt = $db->prepare($updateSql);
+    $updateStmt->execute([
+        ':user_id' => $userId,
+        ':total' => $total
+    ]);
+    
+    return $total;
+}
+
+/**
+ * Delete ticket and recalculate points (Module 04)
+ * @param int $ticketId
+ * @return bool Success
+ */
+function deleteTicketAndRecalc($ticketId) {
+    $db = getDB();
+    
+    // Get user_ID first
+    $sql = "SELECT user_ID FROM Ticket WHERE ticket_ID = :ticket_id";
+    $stmt = $db->prepare($sql);
+    $stmt->execute([':ticket_id' => $ticketId]);
+    $ticket = $stmt->fetch();
+    
+    if (!$ticket) {
+        return false;
+    }
+    
+    // Delete ticket
+    $deleteSql = "DELETE FROM Ticket WHERE ticket_ID = :ticket_id";
+    $deleteStmt = $db->prepare($deleteSql);
+    $success = $deleteStmt->execute([':ticket_id' => $ticketId]);
+    
+    // Recalculate points
+    if ($success) {
+        recalculateUserPoints($ticket['user_ID']);
+    }
+    
+    return $success;
+}
+
+/**
+ * Get only the 3 required violation types for Module 04
+ * @return array Violations ordered by points ascending
+ */
+function getModule4ViolationsOnly() {
+    $db = getDB();
+    $sql = "SELECT * FROM Violation 
+            WHERE violation_type IN (
+                'Parking Violation',
+                'Not Comply with Campus Traffic Regulations',
+                'Accident Caused'
+            )
+            ORDER BY violation_points ASC";
+    $stmt = $db->query($sql);
     return $stmt->fetchAll();
 }
 
@@ -534,10 +819,9 @@ function searchTickets($query) {
                 u.username,
                 u.email,
                 vl.violation_type,
-                vl.violation_points,
-                vl.fine_amount
+                vl.violation_points
             FROM Ticket t
-            INNER JOIN Vehicle v ON t.vehicle_ID = v.vehicle_ID
+            LEFT JOIN Vehicle v ON t.vehicle_ID = v.vehicle_ID
             INNER JOIN User u ON t.user_ID = u.user_ID
             INNER JOIN Violation vl ON t.violation_ID = vl.violation_ID
             WHERE v.license_plate LIKE :query 
@@ -673,10 +957,9 @@ function getLatestTickets($limit = 20) {
                 u.username,
                 u.email,
                 vl.violation_type,
-                vl.violation_points,
-                vl.fine_amount
+                vl.violation_points
             FROM Ticket t
-            INNER JOIN Vehicle v ON t.vehicle_ID = v.vehicle_ID
+            LEFT JOIN Vehicle v ON t.vehicle_ID = v.vehicle_ID
             INNER JOIN User u ON t.user_ID = u.user_ID
             INNER JOIN Violation vl ON t.violation_ID = vl.violation_ID
             ORDER BY t.issued_at DESC

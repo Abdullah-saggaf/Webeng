@@ -5,7 +5,9 @@ requireRole(['safety_staff']);
 
 $success_message = '';
 $error_message = '';
-$violations = getAllViolations();
+$created_ticket_id = null;
+$created_qr_code = null;
+$violations = getModule4ViolationsOnly(); // Only show required 3 violations (10/15/20 points)
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_summon'])) {
@@ -14,24 +16,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_summon'])) {
     $violationId = $_POST['violation_id'] ?? '';
     $description = trim($_POST['description'] ?? '');
     
-    // Validation
+    // Validation: At least one identifier is required
     if (empty($licensePlate) && empty($studentId)) {
-        $error_message = "Please enter either a license plate or student ID.";
+        $error_message = "Either License Plate or Student ID is required to issue a summon.";
     } elseif (empty($violationId)) {
         $error_message = "Please select a violation type.";
     } else {
-        // Find vehicle
-        $vehicle = null;
-        if (!empty($licensePlate)) {
+        // Scenario 1: Only Student ID provided (no license plate)
+        if (!empty($studentId) && empty($licensePlate)) {
+            $student = getUserById($studentId);
+            if (!$student) {
+                $error_message = "Student not found. Please verify the Student ID and try again.";
+            } elseif ($student['user_type'] !== 'student') {
+                $error_message = "Invalid Student ID. The ID must belong to a student.";
+            } else {
+                // Issue to student directly, no vehicle info
+                $proceedWithCreation = true;
+                $targetUserId = $student['user_ID'];
+                $targetVehicleId = null;
+            }
+        }
+        // Scenario 2: License plate provided (with or without student ID)
+        else {
             $vehicle = getVehicleByPlate($licensePlate);
-        } elseif (!empty($studentId)) {
-            $vehicle = getVehicleByUserId($studentId);
+            
+            if (!$vehicle) {
+                // Vehicle NOT registered
+                if (empty($studentId)) {
+                    $error_message = "Vehicle not registered. Student ID is required to issue summon to the driver.";
+                } else {
+                    // Validate student exists
+                    $student = getUserById($studentId);
+                    if (!$student) {
+                        $error_message = "Student not found. Please verify the Student ID and try again.";
+                    } elseif ($student['user_type'] !== 'student') {
+                        $error_message = "Invalid Student ID. The ID must belong to a student.";
+                    } else {
+                        // Proceed with ticket creation for unregistered vehicle
+                        $proceedWithCreation = true;
+                        $targetUserId = $student['user_ID'];
+                        $targetVehicleId = null;
+                    }
+                }
+            } else {
+                // Vehicle IS registered - Use vehicle's owner
+                if (!empty($studentId)) {
+                    // Verify student ID matches vehicle owner
+                    if (strtoupper($studentId) !== strtoupper($vehicle['user_ID'])) {
+                        $error_message = "Student ID does not match the registered owner of this vehicle.";
+                    } else {
+                        $proceedWithCreation = true;
+                        $targetUserId = $vehicle['user_ID'];
+                        $targetVehicleId = $vehicle['vehicle_ID'];
+                    }
+                } else {
+                    // No student ID provided, use vehicle owner
+                    $proceedWithCreation = true;
+                    $targetUserId = $vehicle['user_ID'];
+                    $targetVehicleId = $vehicle['vehicle_ID'];
+                }
+            }
         }
         
-        if (!$vehicle) {
-            $error_message = "Vehicle or student not found. Please check the plate number or student ID.";
-        } else {
-            // Get violation details to add points
+        // Create ticket if validation passed
+        if (isset($proceedWithCreation) && $proceedWithCreation) {
+            // Get violation details
             $violationDetails = null;
             foreach ($violations as $v) {
                 if ($v['violation_ID'] == $violationId) {
@@ -42,14 +91,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_summon'])) {
             
             if ($violationDetails) {
                 try {
-                    // Create ticket
-                    if (createTicket($vehicle['vehicle_ID'], $vehicle['user_ID'], $violationId, $description)) {
-                        // Add points to user
-                        addUserPoints($vehicle['user_ID'], $violationDetails['violation_points']);
+                    // Create ticket (returns array with ticket_id and qr_code_value)
+                    // Status is automatically 'Completed' and QR is generated
+                    // Points are recalculated automatically
+                    $result = createTicket($targetVehicleId, $targetUserId, $violationId, $description);
+                    
+                    if ($result && isset($result['ticket_id'])) {
+                        $created_ticket_id = $result['ticket_id'];
+                        $created_qr_code = $result['qr_code_value'];
                         
-                        $success_message = "Summon created successfully! Ticket issued to " . htmlspecialchars($vehicle['user_ID']) . 
-                                         " for " . htmlspecialchars($violationDetails['violation_type']) . 
-                                         ". " . $violationDetails['violation_points'] . " demerit points added.";
+                        $vehicleStatus = $targetVehicleId ? "registered vehicle" : "unregistered vehicle";
+                        $success_message = "Summon created successfully! Ticket #" . $created_ticket_id . 
+                                         " issued to " . htmlspecialchars($targetUserId) . 
+                                         " (" . $vehicleStatus . ") for " . htmlspecialchars($violationDetails['violation_type']) . 
+                                         " (" . $violationDetails['violation_points'] . " demerit points).";
                         
                         // Clear form
                         $licensePlate = '';
@@ -77,14 +132,28 @@ renderHeader('Issue Summon');
     <p>Create a new traffic summon for a violation</p>
     
     <?php if (!empty($success_message)): ?>
-        <div style="background: #d1fae5; color: #065f46; padding: 12px; border-radius: 8px; margin: 15px 0; border: 1px solid #6ee7b7;">
-            <i class="fas fa-check-circle"></i> <?php echo $success_message; ?>
+        <div style="background: #d1fae5; color: #065f46; padding: 15px; border-radius: 8px; margin: 15px 0; border: 1px solid #6ee7b7;">
+            <div style="display: flex; align-items: start; gap: 10px;">
+                <i class="fas fa-check-circle" style="font-size: 20px; margin-top: 2px;"></i>
+                <div style="flex: 1;">
+                    <div style="font-weight: 600;">
+                        <?php echo $success_message; ?>
+                    </div>
+                </div>
+            </div>
         </div>
     <?php endif; ?>
     
     <?php if (!empty($error_message)): ?>
-        <div style="background: #fee2e2; color: #b91c1c; padding: 12px; border-radius: 8px; margin: 15px 0; border: 1px solid #fecaca;">
-            <i class="fas fa-exclamation-triangle"></i> <?php echo htmlspecialchars($error_message); ?>
+        <div style="background: #fee2e2; color: #b91c1c; padding: 15px; border-radius: 8px; margin: 15px 0; border: 1px solid #fecaca;">
+            <div style="display: flex; align-items: start; gap: 10px;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 20px; margin-top: 2px;"></i>
+                <div style="flex: 1;">
+                    <div style="font-weight: 600;">
+                        <?php echo htmlspecialchars($error_message); ?>
+                    </div>
+                </div>
+            </div>
         </div>
     <?php endif; ?>
     
@@ -95,9 +164,17 @@ renderHeader('Issue Summon');
                 <h3 style="margin: 0 0 15px 0; font-size: 16px; color: #374151;">
                     <i class="fas fa-car"></i> Vehicle Identification
                 </h3>
-                <p style="margin: 0 0 15px 0; font-size: 13px; color: #6b7280;">
-                    Enter either the license plate OR the student ID (one is required)
-                </p>
+                <div style="background: #fef3c7; border: 1px solid #fbbf24; padding: 12px; border-radius: 8px; margin-bottom: 15px;">
+                    <div style="display: flex; align-items: start; gap: 8px;">
+                        <i class="fas fa-info-circle" style="color: #d97706; margin-top: 2px;"></i>
+                        <div style="font-size: 13px; color: #78350f;">
+                            <strong>Provide at least one identifier:</strong><br>
+                            • <strong>License Plate</strong>: For registered vehicles (Student ID optional for verification)<br>
+                            • <strong>Student ID</strong>: For unregistered vehicles or when driver is present without vehicle info<br>
+                            • Both fields can be filled if available
+                        </div>
+                    </div>
+                </div>
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                     <div>
@@ -116,7 +193,7 @@ renderHeader('Issue Summon');
                         </label>
                         <input type="text" name="student_id" 
                                value="<?php echo isset($studentId) ? htmlspecialchars($studentId) : ''; ?>"
-                               placeholder="e.g., CD22001"
+                               placeholder="e.g., S001"
                                style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;">
                     </div>
                 </div>
@@ -138,7 +215,7 @@ renderHeader('Issue Summon');
                         <?php foreach ($violations as $violation): ?>
                             <option value="<?php echo htmlspecialchars($violation['violation_ID']); ?>">
                                 <?php echo htmlspecialchars($violation['violation_type']); ?> 
-                                (<?php echo $violation['violation_points']; ?> points, RM <?php echo number_format($violation['fine_amount'], 2); ?>)
+                                (<?php echo $violation['violation_points']; ?> points)
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -180,7 +257,6 @@ renderHeader('Issue Summon');
                 <tr style="background: #f3f4f6; border-bottom: 2px solid #e5e7eb;">
                     <th style="padding: 10px; text-align: left; font-weight: 600;">Violation Type</th>
                     <th style="padding: 10px; text-align: center; font-weight: 600;">Demerit Points</th>
-                    <th style="padding: 10px; text-align: right; font-weight: 600;">Fine Amount (RM)</th>
                 </tr>
             </thead>
             <tbody>
@@ -191,9 +267,6 @@ renderHeader('Issue Summon');
                             <span style="background: #fee2e2; color: #b91c1c; padding: 4px 10px; border-radius: 6px; font-weight: 600;">
                                 <?php echo htmlspecialchars($violation['violation_points']); ?>
                             </span>
-                        </td>
-                        <td style="padding: 10px; text-align: right; font-weight: 600;">
-                            <?php echo number_format($violation['fine_amount'], 2); ?>
                         </td>
                     </tr>
                 <?php endforeach; ?>
